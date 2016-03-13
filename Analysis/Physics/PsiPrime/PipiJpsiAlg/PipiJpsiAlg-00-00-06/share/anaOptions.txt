@@ -1,0 +1,40 @@
+ApplicationMgr.DLLs += {"PipiJpsiAlg"};
+ApplicationMgr.TopAlg += { "PipiJpsi" };
+
+PipiJpsi.Vr0cut = 1.0;
+PipiJpsi.Vz0cut = 10.0;
+PipiJpsi.PtCut  = 0.0;
+PipiJpsi.MomCut = 2.2;
+PipiJpsi.ChaCosthetaCut = 0.93;
+PipiJpsi.BarEneCut = 0.025;
+PipiJpsi.EndEneCut = 0.050;
+PipiJpsi.DangCut = 10;
+PipiJpsi.MinEstCut  = -0.01;
+PipiJpsi.MaxEstCut = 14.01;
+PipiJpsi.BarCosthetaCut = 0.8;
+PipiJpsi.MinEndCosthetaCut = 0.84;
+PipiJpsi.MaxEndCosthetaCut = 0.92;
+PipiJpsi.PipiDangCut = 0.98;
+
+PipiJpsi.CmsEne = 3.686;
+PipiJpsi.DiffPionLep = 0.8;
+PipiJpsi.CheckDedx = false;
+PipiJpsi.CheckTof  = false;
+
+PipiJpsi.Subsample = false; 
+PipiJpsi.Trigger = false; 
+PipiJpsi.Estime = false;
+PipiJpsi.DistinEMuon = 0.5; // using e/p
+
+PipiJpsi.EventRate = false;
+PipiJpsi.ChanDet = 1;
+
+PipiJpsi.Track = false; // see head file for more
+PipiJpsi.Valid = true; // whether check kalmanfilter vaild or not
+PipiJpsi.Fit = true; // whether do kinematic fit
+PipiJpsi.Vtdb = true; // whether using vertex data base
+PipiJpsi.Debug = false; // whether do debug
+PipiJpsi.NonFsr = false; // whether do debug
+PipiJpsi.OnlyFour = false; // only save 4 tracks
+PipiJpsi.Premc = false; // whether save information before selection
+PipiJpsi.Kaon = false; // whether analyze K+ K- J/psi

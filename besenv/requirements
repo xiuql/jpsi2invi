@@ -1,0 +1,67 @@
+author Qiumei Ma <maqm@ihep.ac.cn>
+
+# set the SITEROOT
+set SITEROOT "/afs/ihep.ac.cn/bes3/offline"
+# set the offset in cvs repository
+set CMTCVSOFFSET "BossCvs"
+
+set CMTCONFIG "x86_64-slc5-gcc43-opt" \
+    dbg       "x86_64-slc5-gcc43-dbg"
+
+#Set LCG_release_area
+
+set LCG_release_area "$(SITEROOT)/ExternalLib/lcg/app/releases/LCGCMT"
+# Set LCG release number
+macro LCGCMTVERS   "57a_clhep2.0.4.5"
+# Setup the CMT search path
+path_remove CMTPATH "/LCGCMT_" WIN32 "\LCGCMT_"
+path_append CMTPATH "$(LCG_release_area)/LCGCMT_$(LCGCMTVERS)"
+
+# Set release number
+macro GAUDI_RELEASE "GAUDI_v21r6"
+# Set the location of Gaudi 
+macro GaudiArea "$(SITEROOT)/ExternalLib/Gaudi/$(GAUDI_RELEASE)/x86_64-slc5-gcc43-clhep2.0.4.5"
+#macro GaudiArea "$(SITEROOT)/ExternalLib/Gaudi/$(GAUDI_RELEASE)"
+# Setup the CMT search path
+path_remove CMTPATH  "/Gaudi/" 
+path_prepend CMTPATH "$(GaudiArea)"
+
+
+# Set the base location of all release for your site:
+macro BES_DIST_AREA "${SITEROOT}/Boss"
+#0 Set release number
+set BES_RELEASE "6.6.4.p03"
+# Setup the CMT search path
+set BesArea "$(BES_DIST_AREA)/$(BES_RELEASE)"
+path_remove CMTPATH  "${BesArea}" 
+path_prepend CMTPATH "${BesArea}"
+
+#Add your worarea to CMTPATH
+#set WorkArea "/ihepbatch/bes/maqm/workarea"
+set WorkArea "/afs/ihep.ac.cn/users/s/shixin/bes/jpsi2invi/v0.1"
+# Add dev area to the front of your CMTPATH (but first remove any previously defined devarea which is under your home directory)
+#path_remove CMTPATH  "${WorkArea}"
+#path_prepend CMTPATH "${WorkArea}"
+
+
+#gcc (remove double free)
+set MALLOC_CHECK_ 0
+
+# Setup compiler-specific search paths
+#path_remove  PATH "/afs/ihep.ac.cn/bes3/offline/ExternalLib/lcg/external/gcc/4.3.2/x86_64-slc5/bin"
+#path_prepend PATH "/afs/ihep.ac.cn/bes3/offline/ExternalLib/lcg/external/gcc/4.3.2/x86_64-slc5/bin"
+#path_remove  LD_LIBRARY_PATH "/afs/ihep.ac.cn/bes3/offline/ExternalLib/lcg/external/gcc/4.3.2/x86_64-slc5/lib"
+#path_prepend LD_LIBRARY_PATH "/afs/ihep.ac.cn/bes3/offline/ExternalLib/lcg/external/gcc/4.3.2/x86_64-slc5/lib"
+#path_remove  LD_LIBRARY_PATH "/afs/ihep.ac.cn/bes3/offline/ExternalLib/lcg/external/gcc/4.3.2/x86_64-slc5/lib64"
+#ipath_prepend LD_LIBRARY_PATH "/afs/ihep.ac.cn/bes3/offline/ExternalLib/lcg/external/gcc/4.3.2/x86_64-slc5/lib64"
+
+path_remove  PATH "/afs/ihep.ac.cn/bes3/offline/ExternalLib/contrib/gcc/4.3.2/x86_64-slc5/bin"
+path_prepend PATH "/afs/ihep.ac.cn/bes3/offline/ExternalLib/contrib/gcc/4.3.2/x86_64-slc5/bin"
+path_remove  PATH "/afs/ihep.ac.cn/bes3/offline/ExternalLib/contrib/intel-fortran/bin"
+path_prepend PATH "/afs/ihep.ac.cn/bes3/offline/ExternalLib/contrib/intel-fortran/bin"
+path_remove  LD_LIBRARY_PATH "/afs/ihep.ac.cn/bes3/offline/ExternalLib/contrib/gcc/4.3.2/x86_64-slc5/lib"
+path_prepend LD_LIBRARY_PATH "/afs/ihep.ac.cn/bes3/offline/ExternalLib/contrib/gcc/4.3.2/x86_64-slc5/lib"
+path_remove  LD_LIBRARY_PATH "/afs/ihep.ac.cn/bes3/offline/ExternalLib/contrib/gcc/4.3.2/x86_64-slc5/lib64"
+path_prepend LD_LIBRARY_PATH "/afs/ihep.ac.cn/bes3/offline/ExternalLib/contrib/gcc/4.3.2/x86_64-slc5/lib64"
+path_remove  LD_LIBRARY_PATH "/afs/ihep.ac.cn/bes3/offline/ExternalLib/contrib/intel-fortran/lib/intel64"
+path_prepend LD_LIBRARY_PATH "/afs/ihep.ac.cn/bes3/offline/ExternalLib/contrib/intel-fortran/lib/intel64"
