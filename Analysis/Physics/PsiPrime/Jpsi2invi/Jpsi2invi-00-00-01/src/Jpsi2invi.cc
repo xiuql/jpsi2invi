@@ -19,11 +19,7 @@
 //
 
 #include "GaudiKernel/Algorithm.h"
-
-//
-// constants
-//
-
+#include "GaudiKernel/DeclareFactoryEntries.h"
 
 //
 // class declaration
@@ -43,9 +39,21 @@ private:
   double m_vr0cut; 
   
 }; 
-  
-  
-  
+
+
+//
+// module declare
+//
+
+DECLARE_ALGORITHM_FACTORY( Jpsi2invi )
+DECLARE_FACTORY_ENTRIES( Jpsi2invi ) {
+  DECLARE_ALGORITHM(Jpsi2invi);
+}
+
+//
+// constants
+//
+
 
   
 //
@@ -61,8 +69,8 @@ Jpsi2invi::Jpsi2invi(const std::string& name, ISvcLocator* pSvcLocator) :
 
 StatusCode Jpsi2invi::initialize(){
   MsgStream log(msgSvc(), name());
-  
-  log << MSG::INFO << "in initialize()" << endmsg;
+  std::cout << ">>>>>>>> here in initialize! " << std::endl;
+  log << MSG::INFO << ">>>>>>> in initialize()" << endmsg;
 }
 
 
