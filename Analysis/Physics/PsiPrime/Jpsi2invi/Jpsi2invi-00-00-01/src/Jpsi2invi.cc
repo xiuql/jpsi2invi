@@ -20,6 +20,10 @@
 
 #include "GaudiKernel/Algorithm.h"
 #include "GaudiKernel/DeclareFactoryEntries.h"
+#include "GaudiKernel/LoadFactoryEntries.h"
+#include "GaudiKernel/NTuple.h"
+#include "EventModel/EventHeader.h"
+
 
 //
 // class declaration
@@ -37,7 +41,11 @@ public:
 private:
   // Declare r0, z0 cut for charged tracks
   double m_vr0cut; 
-  
+
+  NTuple::Tuple* m_tuple8; 
+  NTuple::Item<long> m_run;
+  NTuple::Item<long> m_event;
+
 }; 
 
 
@@ -49,6 +57,8 @@ DECLARE_ALGORITHM_FACTORY( Jpsi2invi )
 DECLARE_FACTORY_ENTRIES( Jpsi2invi ) {
   DECLARE_ALGORITHM(Jpsi2invi);
 }
+
+LOAD_FACTORY_ENTRIES( Jpsi2invi )
 
 //
 // constants
@@ -71,6 +81,31 @@ StatusCode Jpsi2invi::initialize(){
   MsgStream log(msgSvc(), name());
   std::cout << ">>>>>>>> here in initialize! " << std::endl;
   log << MSG::INFO << ">>>>>>> in initialize()" << endmsg;
+
+  StatusCode status;
+  
+  NTuplePtr nt8(ntupleSvc(), "FILE1/infmom");
+  if ( nt8 ) m_tuple8 = nt8;
+  else {
+    m_tuple8 = ntupleSvc()->book ("FILE1/infmom", CLID_ColumnWiseTuple, 
+				  "information with momentum method");
+    if ( m_tuple8 )    {
+    status = m_tuple8->addItem ("run", m_run );
+    status = m_tuple8->addItem ("event", m_event );
+    }
+    
+    else    { 
+      log << MSG::ERROR << "    Cannot book N-tuple:" 
+	  << long(m_tuple8) << endmsg;
+      return StatusCode::FAILURE;
+    }
+  }
+
+  //--------end booking --------
+
+  log << MSG::INFO << "successfully return from initialize()" <<endmsg;
+  return StatusCode::SUCCESS;
+
 }
 
 
@@ -82,6 +117,20 @@ StatusCode Jpsi2invi::execute() {
   MsgStream log(msgSvc(), name());
   log << MSG::INFO << "in execute()" << endreq;
 
+  StatusCode sc=StatusCode::SUCCESS;
+  //save the events passed selection to a new file
+  setFilterPassed(false);
+
+  SmartDataPtr<Event::EventHeader>eventHeader(eventSvc(),"/Event/EventHeader");
+  if(!eventHeader){
+    log << MSG::ERROR << "EventHeader not found" << endreq;
+    return sc;
+  }
+  m_run = eventHeader->runNumber();
+  m_event = eventHeader->eventNumber();
+
+  m_tuple8->write();
+  
 }
 
 
