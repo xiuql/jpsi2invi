@@ -42,10 +42,24 @@ private:
   // Declare r0, z0 cut for charged tracks
   double m_vr0cut; 
 
-  NTuple::Tuple* m_tuple8; 
+  // Define Histograms
+  IHistogram1D *h_vr0;
+  IHistogram1D *h_vz0;
+  
+  // Define Ntuples
+  
+  // general info 
+  NTuple::Tuple* m_tuple8;
   NTuple::Item<long> m_run;
   NTuple::Item<long> m_event;
-
+  NTuple::Item<double> m_vr0;
+  NTuple::Item<double> m_vz0;
+  
+  // functions
+  bool getGeneralInfo();
+  
+  
+  
 }; 
 
 
@@ -110,26 +124,10 @@ StatusCode Jpsi2invi::initialize(){
 
 
 StatusCode Jpsi2invi::execute() {
-  
-  //std::cout << "execute()" << std::endl;
-
-
   MsgStream log(msgSvc(), name());
   log << MSG::INFO << "in execute()" << endreq;
 
-  StatusCode sc=StatusCode::SUCCESS;
-  //save the events passed selection to a new file
-  setFilterPassed(false);
-
-  SmartDataPtr<Event::EventHeader>eventHeader(eventSvc(),"/Event/EventHeader");
-  if(!eventHeader){
-    log << MSG::ERROR << "EventHeader not found" << endreq;
-    return sc;
-  }
-  m_run = eventHeader->runNumber();
-  m_event = eventHeader->eventNumber();
-
-  m_tuple8->write();
+  if (!getGeneralInfo()) return StatusCode::FAILURE; 
   
 }
 
@@ -144,3 +142,18 @@ StatusCode Jpsi2invi::finalize() {
 
 Jpsi2invi::~Jpsi2invi() {
 }
+
+
+bool Jpsi2invi::getGeneralInfo() {
+  MsgStream log(msgSvc(), name());
+  SmartDataPtr<Event::EventHeader>eventHeader(eventSvc(),"/Event/EventHeader");
+  if(!eventHeader){
+    log << MSG::ERROR << "EventHeader not found" << endreq;
+    return false;
+  }
+  m_run = eventHeader->runNumber();
+  m_event = eventHeader->eventNumber();
+  m_tuple8->write();
+  return true;
+}
+
