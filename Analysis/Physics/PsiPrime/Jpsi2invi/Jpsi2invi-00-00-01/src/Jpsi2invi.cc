@@ -22,8 +22,12 @@
 #include "GaudiKernel/DeclareFactoryEntries.h"
 #include "GaudiKernel/LoadFactoryEntries.h"
 #include "GaudiKernel/NTuple.h"
+#include "GaudiKernel/Bootstrap.h"
+
 #include "EventModel/EventHeader.h"
 
+#include "CLHEP/Vector/ThreeVector.h"
+#include "VertexFit/IVertexDbSvc.h"
 
 //
 // class declaration
@@ -57,7 +61,8 @@ private:
   
   // functions
   bool getGeneralInfo();
-  
+  bool passPreSelection();
+  bool passVertexSelection(); 
   
   
 }; 
@@ -128,6 +133,7 @@ StatusCode Jpsi2invi::execute() {
   log << MSG::INFO << "in execute()" << endreq;
 
   if (!getGeneralInfo()) return StatusCode::FAILURE; 
+  if (!passPreSelection()) return StatusCode::FAILURE; 
   
 }
 
@@ -157,3 +163,26 @@ bool Jpsi2invi::getGeneralInfo() {
   return true;
 }
 
+bool Jpsi2invi::passPreSelection() {
+
+  if (! passVertexSelection()) return false; 
+  return true; 
+}
+
+bool Jpsi2invi::passVertexSelection() {
+  // check x0, y0, z0, r0
+  // suggest cut: |z0|<10 && r0<1 (cm)
+  CLHEP::Hep3Vector xorigin(0,0,0);
+  IVertexDbSvc*  vtxsvc;
+  double *dbv, *vv;
+  Gaudi::svcLocator()->service("VertexDbSvc", vtxsvc);
+  if(vtxsvc->isVertexValid()){
+    dbv = vtxsvc->PrimaryVertex(); 
+    vv = vtxsvc->SigmaPrimaryVertex();  
+    xorigin.setX(dbv[0]);
+    xorigin.setY(dbv[1]);
+    xorigin.setZ(dbv[2]);
+  }
+
+  return true; 
+}
