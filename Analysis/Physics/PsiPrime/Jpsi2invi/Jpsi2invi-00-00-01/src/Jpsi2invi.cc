@@ -25,9 +25,15 @@
 #include "GaudiKernel/Bootstrap.h"
 
 #include "EventModel/EventHeader.h"
+#include "EvtRecEvent/EvtRecEvent.h"
+#include "EvtRecEvent/EvtRecTrack.h"
 
 #include "CLHEP/Vector/ThreeVector.h"
+
+#include "AIDA/IHistogram1D.h"
+
 #include "VertexFit/IVertexDbSvc.h"
+#include "VertexFit/Helix.h"
 
 //
 // class declaration
@@ -44,7 +50,8 @@ public:
 
 private:
   // Declare r0, z0 cut for charged tracks
-  double m_vr0cut; 
+  double m_vr0cut, m_vz0cut;
+  double m_distin_pionlep;
 
   // Define Histograms
   IHistogram1D *h_vr0;
@@ -93,6 +100,9 @@ Jpsi2invi::Jpsi2invi(const std::string& name, ISvcLocator* pSvcLocator) :
   Algorithm(name, pSvcLocator) {
   //Declare the properties  
   declareProperty("Vr0cut", m_vr0cut=1.0);
+  declareProperty("Vz0cut", m_vz0cut=10.0);
+  declareProperty("DiffPionLep", m_distin_pionlep=0.8);
+
 }
 
 
@@ -102,7 +112,15 @@ StatusCode Jpsi2invi::initialize(){
   log << MSG::INFO << ">>>>>>> in initialize()" << endmsg;
 
   StatusCode status;
-  
+
+  SmartDataPtr<IHistogram1D> h1(histoSvc(),"hvr");
+  if( h1 ) h_vr0 = h1;
+  else h_vr0 = histoSvc()->book( "hvr" ,  "vr0", 200, -40., 40.);
+
+  SmartDataPtr<IHistogram1D> h2(histoSvc(),"hvz");
+  if( h2 ) h_vz0 = h2;
+  else h_vz0 = histoSvc()->book( "hvz" ,  "vz0", 200, -40., 40.);
+
   NTuplePtr nt8(ntupleSvc(), "FILE1/infmom");
   if ( nt8 ) m_tuple8 = nt8;
   else {
@@ -184,5 +202,39 @@ bool Jpsi2invi::passVertexSelection() {
     xorigin.setZ(dbv[2]);
   }
 
+  SmartDataPtr<EvtRecEvent>evtRecEvent(eventSvc(),"/Event/EvtRec/EvtRecEvent");
+  if(!evtRecEvent) return false; 
+
+  SmartDataPtr<EvtRecTrackCol> evtRecTrkCol(eventSvc(), "/Event/EvtRec/EvtRecTrackCol");
+  if(!evtRecTrkCol) return false;
+
+  
+  EvtRecTrackIterator m_itTrk_begin = evtRecTrkCol->begin();
+  for(int i = 0; i < evtRecEvent->totalCharged(); i++){
+    EvtRecTrackIterator itTrk=evtRecTrkCol->begin() + i;
+    if(! ((*itTrk)->isMdcKalTrackValid()) ) continue;
+    RecMdcKalTrack* mdcTrk = (*itTrk)->mdcKalTrack();
+    if(mdcTrk->p()<m_distin_pionlep) mdcTrk->setPidType(RecMdcKalTrack::pion);
+    else mdcTrk->setPidType(RecMdcKalTrack::muon);
+
+    HepVector a = mdcTrk->helix();
+    HepSymMatrix Ea = mdcTrk->err();
+    HepPoint3D point0(0.,0.,0.);
+    VFHelix helixip(point0,a,Ea);
+    HepPoint3D IP(xorigin[0],xorigin[1],xorigin[2]);
+    helixip.pivot(IP);
+    HepVector vecipa = helixip.a();
+
+    m_vz0 = vecipa[3];
+    m_vr0 = vecipa[0];
+    
+    h_vz0->fill(m_vz0);
+    h_vr0->fill(m_vr0);
+
+    if(fabs(m_vz0) >= m_vz0cut) return false;
+    if(fabs(m_vr0) >= m_vr0cut) return false;
+
+  }
+  
   return true; 
 }
