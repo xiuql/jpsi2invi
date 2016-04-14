@@ -40,8 +40,8 @@ path_prepend CMTPATH "${BesArea}"
 #set WorkArea "/ihepbatch/bes/maqm/workarea"
 set WorkArea "/afs/ihep.ac.cn/users/s/shixin/bes/jpsi2invi/v0.1"
 # Add dev area to the front of your CMTPATH (but first remove any previously defined devarea which is under your home directory)
-#path_remove CMTPATH  "${WorkArea}"
-#path_prepend CMTPATH "${WorkArea}"
+path_remove CMTPATH  "${WorkArea}"
+path_prepend CMTPATH "${WorkArea}"
 
 
 #gcc (remove double free)
