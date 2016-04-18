@@ -151,8 +151,9 @@ StatusCode Jpsi2invi::execute() {
   log << MSG::INFO << "in execute()" << endreq;
 
   if (!getGeneralInfo()) return StatusCode::FAILURE; 
-  if (!passPreSelection()) return StatusCode::FAILURE; 
-  
+  //if (!passPreSelection()) return StatusCode::FAILURE; 
+  m_tuple8->write();
+
 }
 
 
@@ -177,7 +178,7 @@ bool Jpsi2invi::getGeneralInfo() {
   }
   m_run = eventHeader->runNumber();
   m_event = eventHeader->eventNumber();
-  m_tuple8->write();
+  //m_tuple8->write();
   return true;
 }
 
