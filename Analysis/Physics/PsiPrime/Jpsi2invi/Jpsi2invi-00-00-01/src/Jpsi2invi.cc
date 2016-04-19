@@ -30,8 +30,6 @@
 
 #include "CLHEP/Vector/ThreeVector.h"
 
-#include "AIDA/IHistogram1D.h"
-
 #include "VertexFit/IVertexDbSvc.h"
 #include "VertexFit/Helix.h"
 
@@ -53,10 +51,6 @@ private:
   double m_vr0cut, m_vz0cut;
   double m_distin_pionlep;
 
-  // Define Histograms
-  IHistogram1D *h_vr0;
-  IHistogram1D *h_vz0;
-  
   // Define Ntuples
   
   // general info 
@@ -108,18 +102,9 @@ Jpsi2invi::Jpsi2invi(const std::string& name, ISvcLocator* pSvcLocator) :
 
 StatusCode Jpsi2invi::initialize(){
   MsgStream log(msgSvc(), name());
-  std::cout << ">>>>>>>> here in initialize! " << std::endl;
   log << MSG::INFO << ">>>>>>> in initialize()" << endmsg;
 
   StatusCode status;
-
-  SmartDataPtr<IHistogram1D> h1(histoSvc(),"hvr");
-  if( h1 ) h_vr0 = h1;
-  else h_vr0 = histoSvc()->book( "hvr" ,  "vr0", 200, -40., 40.);
-
-  SmartDataPtr<IHistogram1D> h2(histoSvc(),"hvz");
-  if( h2 ) h_vz0 = h2;
-  else h_vz0 = histoSvc()->book( "hvz" ,  "vz0", 200, -40., 40.);
 
   NTuplePtr nt8(ntupleSvc(), "FILE1/infmom");
   if ( nt8 ) m_tuple8 = nt8;
@@ -211,8 +196,6 @@ bool Jpsi2invi::passVertexSelection() {
   SmartDataPtr<EvtRecTrackCol> evtRecTrkCol(eventSvc(), "/Event/EvtRec/EvtRecTrackCol");
   if(!evtRecTrkCol) return false;
 
-  // double m_vr0(100), m_vz0(100);
-  
   EvtRecTrackIterator m_itTrk_begin = evtRecTrkCol->begin();
   for(int i = 0; i < evtRecEvent->totalCharged(); i++){
     EvtRecTrackIterator itTrk=evtRecTrkCol->begin() + i;
@@ -232,9 +215,6 @@ bool Jpsi2invi::passVertexSelection() {
     m_vz0 = vecipa[3];
     m_vr0 = vecipa[0];
     
-    h_vz0->fill(m_vz0);
-    h_vr0->fill(m_vr0);
-
     if(fabs(m_vz0) >= m_vz0cut) continue;
     if(fabs(m_vr0) >= m_vr0cut) continue;
 
