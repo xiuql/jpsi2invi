@@ -63,8 +63,8 @@ private:
   NTuple::Tuple* m_tuple8;
   NTuple::Item<long> m_run;
   NTuple::Item<long> m_event;
-  NTuple::Item<double> m_vr0;
-  NTuple::Item<double> m_vz0;
+  // NTuple::Item<double> m_vr0;
+  // NTuple::Item<double> m_vz0;
   
   // functions
   bool getGeneralInfo();
@@ -151,8 +151,10 @@ StatusCode Jpsi2invi::execute() {
   log << MSG::INFO << "in execute()" << endreq;
 
   if (!getGeneralInfo()) return StatusCode::FAILURE; 
-  //if (!passPreSelection()) return StatusCode::FAILURE; 
+  // if (!passPreSelection()) return StatusCode::FAILURE; 
+  if (! passVertexSelection())  return StatusCode::FAILURE; 
   m_tuple8->write();
+  
 
 }
 
@@ -178,7 +180,6 @@ bool Jpsi2invi::getGeneralInfo() {
   }
   m_run = eventHeader->runNumber();
   m_event = eventHeader->eventNumber();
-  //m_tuple8->write();
   return true;
 }
 
@@ -209,6 +210,7 @@ bool Jpsi2invi::passVertexSelection() {
   SmartDataPtr<EvtRecTrackCol> evtRecTrkCol(eventSvc(), "/Event/EvtRec/EvtRecTrackCol");
   if(!evtRecTrkCol) return false;
 
+  double m_vr0(100), m_vz0(100);
   
   EvtRecTrackIterator m_itTrk_begin = evtRecTrkCol->begin();
   for(int i = 0; i < evtRecEvent->totalCharged(); i++){
@@ -229,11 +231,11 @@ bool Jpsi2invi::passVertexSelection() {
     m_vz0 = vecipa[3];
     m_vr0 = vecipa[0];
     
-    h_vz0->fill(m_vz0);
-    h_vr0->fill(m_vr0);
+    // h_vz0->fill(m_vz0);
+    // h_vr0->fill(m_vr0);
 
-    if(fabs(m_vz0) >= m_vz0cut) return false;
-    if(fabs(m_vr0) >= m_vr0cut) return false;
+    if(fabs(m_vz0) >= m_vz0cut) continue;
+    if(fabs(m_vr0) >= m_vr0cut) continue;
 
   }
   
