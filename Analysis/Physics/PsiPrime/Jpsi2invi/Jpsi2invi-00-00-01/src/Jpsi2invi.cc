@@ -64,7 +64,7 @@ private:
   NTuple::Item<long> m_run;
   NTuple::Item<long> m_event;
   NTuple::Item<double> m_vr0;
-  // NTuple::Item<double> m_vz0;
+  NTuple::Item<double> m_vz0;
   
   // functions
   bool getGeneralInfo();
@@ -130,6 +130,7 @@ StatusCode Jpsi2invi::initialize(){
     status = m_tuple8->addItem ("run", m_run );
     status = m_tuple8->addItem ("event", m_event );
     status = m_tuple8->addItem ("vr0", m_vr0 );
+    status = m_tuple8->addItem ("vz0", m_vz0 );
     }
     
     else    { 
@@ -211,7 +212,6 @@ bool Jpsi2invi::passVertexSelection() {
   if(!evtRecTrkCol) return false;
 
   // double m_vr0(100), m_vz0(100);
-  double m_vz0(100);
   
   EvtRecTrackIterator m_itTrk_begin = evtRecTrkCol->begin();
   for(int i = 0; i < evtRecEvent->totalCharged(); i++){
