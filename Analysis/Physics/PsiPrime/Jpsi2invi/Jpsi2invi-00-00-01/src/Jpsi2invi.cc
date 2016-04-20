@@ -63,8 +63,8 @@ private:
   // functions
   bool getGeneralInfo();
   bool passPreSelection();
-  bool passVertexSelection(); 
-  
+  bool passVertexSelection(CLHEP::Hep3Vector, RecMdcKalTrack* ); 
+  CLHEP::Hep3Vector getOrigin(); 
   
 }; 
 
@@ -138,8 +138,8 @@ StatusCode Jpsi2invi::execute() {
   log << MSG::INFO << "in execute()" << endreq;
 
   if (!getGeneralInfo()) return StatusCode::FAILURE; 
-  // if (!passPreSelection()) return StatusCode::FAILURE; 
-  if (! passVertexSelection())  return StatusCode::FAILURE; 
+  if (!passPreSelection()) return StatusCode::FAILURE; 
+  // if (! passVertexSelection())  return StatusCode::FAILURE; 
   m_tuple8->write();
   
 
@@ -171,13 +171,71 @@ bool Jpsi2invi::getGeneralInfo() {
 
 bool Jpsi2invi::passPreSelection() {
 
-  if (! passVertexSelection()) return false; 
+//   if (! passVertexSelection()) return false; 
+//   return true; 
+// }
+
+// bool Jpsi2invi::passVertexSelection() {
+  // check x0, y0, z0, r0
+  // suggest cut: |z0|<10 && r0<1 (cm)
+  CLHEP::Hep3Vector xorigin = getOrigin(); 
+  // IVertexDbSvc*  vtxsvc;
+  // double *dbv, *vv;
+  // Gaudi::svcLocator()->service("VertexDbSvc", vtxsvc);
+  // if(vtxsvc->isVertexValid()){
+  //   dbv = vtxsvc->PrimaryVertex(); 
+  //   vv = vtxsvc->SigmaPrimaryVertex();  
+  //   xorigin.setX(dbv[0]);
+  //   xorigin.setY(dbv[1]);
+  //   xorigin.setZ(dbv[2]);
+  // }
+
+  SmartDataPtr<EvtRecEvent>evtRecEvent(eventSvc(),"/Event/EvtRec/EvtRecEvent");
+  if(!evtRecEvent) return false; 
+
+  SmartDataPtr<EvtRecTrackCol> evtRecTrkCol(eventSvc(), "/Event/EvtRec/EvtRecTrackCol");
+  if(!evtRecTrkCol) return false;
+
+  // EvtRecTrackIterator m_itTrk_begin = evtRecTrkCol->begin();
+
+  // loop through charged tracks 
+  for(int i = 0; i < evtRecEvent->totalCharged(); i++){
+
+    // get mdcTrk 
+    EvtRecTrackIterator itTrk=evtRecTrkCol->begin() + i;
+    if(! ((*itTrk)->isMdcKalTrackValid()) ) continue;
+    RecMdcKalTrack* mdcTrk = (*itTrk)->mdcKalTrack();
+    if(mdcTrk->p()<m_distin_pionlep)
+      mdcTrk->setPidType(RecMdcKalTrack::pion);
+    else
+      mdcTrk->setPidType(RecMdcKalTrack::muon);
+
+    if (!passVertexSelection(xorigin, mdcTrk) ) continue; 
+    // HepVector a = mdcTrk->helix();
+    // HepSymMatrix Ea = mdcTrk->err();
+    // HepPoint3D point0(0.,0.,0.);
+    // VFHelix helixip(point0,a,Ea);
+    // HepPoint3D IP(xorigin[0],xorigin[1],xorigin[2]);
+    // helixip.pivot(IP);
+    // HepVector vecipa = helixip.a();
+
+    // m_vz0 = vecipa[3];
+    // m_vr0 = vecipa[0];
+    
+    // if(fabs(m_vz0) >= m_vz0cut) continue;
+    // if(fabs(m_vr0) >= m_vr0cut) continue;
+
+  }
+  
   return true; 
 }
 
-bool Jpsi2invi::passVertexSelection() {
-  // check x0, y0, z0, r0
-  // suggest cut: |z0|<10 && r0<1 (cm)
+
+//   if (! passVertexSelection()) return false; 
+//   return true; 
+// }
+
+CLHEP::Hep3Vector Jpsi2invi::getOrigin() {
   CLHEP::Hep3Vector xorigin(0,0,0);
   IVertexDbSvc*  vtxsvc;
   double *dbv, *vv;
@@ -189,36 +247,26 @@ bool Jpsi2invi::passVertexSelection() {
     xorigin.setY(dbv[1]);
     xorigin.setZ(dbv[2]);
   }
-
-  SmartDataPtr<EvtRecEvent>evtRecEvent(eventSvc(),"/Event/EvtRec/EvtRecEvent");
-  if(!evtRecEvent) return false; 
-
-  SmartDataPtr<EvtRecTrackCol> evtRecTrkCol(eventSvc(), "/Event/EvtRec/EvtRecTrackCol");
-  if(!evtRecTrkCol) return false;
-
-  EvtRecTrackIterator m_itTrk_begin = evtRecTrkCol->begin();
-  for(int i = 0; i < evtRecEvent->totalCharged(); i++){
-    EvtRecTrackIterator itTrk=evtRecTrkCol->begin() + i;
-    if(! ((*itTrk)->isMdcKalTrackValid()) ) continue;
-    RecMdcKalTrack* mdcTrk = (*itTrk)->mdcKalTrack();
-    if(mdcTrk->p()<m_distin_pionlep) mdcTrk->setPidType(RecMdcKalTrack::pion);
-    else mdcTrk->setPidType(RecMdcKalTrack::muon);
-
-    HepVector a = mdcTrk->helix();
-    HepSymMatrix Ea = mdcTrk->err();
-    HepPoint3D point0(0.,0.,0.);
-    VFHelix helixip(point0,a,Ea);
-    HepPoint3D IP(xorigin[0],xorigin[1],xorigin[2]);
-    helixip.pivot(IP);
-    HepVector vecipa = helixip.a();
-
-    m_vz0 = vecipa[3];
-    m_vr0 = vecipa[0];
-    
-    if(fabs(m_vz0) >= m_vz0cut) continue;
-    if(fabs(m_vr0) >= m_vr0cut) continue;
-
-  }
-  
-  return true; 
+  return xorigin; 
 }
+
+
+bool Jpsi2invi::passVertexSelection(CLHEP::Hep3Vector xorigin,
+				    RecMdcKalTrack* mdcTrk ) {
+  HepVector a = mdcTrk->helix();
+  HepSymMatrix Ea = mdcTrk->err();
+  HepPoint3D point0(0.,0.,0.);
+  VFHelix helixip(point0,a,Ea);
+  HepPoint3D IP(xorigin[0],xorigin[1],xorigin[2]);
+  helixip.pivot(IP);
+  HepVector vecipa = helixip.a();
+  
+  m_vz0 = vecipa[3];
+  m_vr0 = vecipa[0];
+  
+  if(fabs(m_vz0) >= m_vz0cut) return false;
+  if(fabs(m_vr0) >= m_vr0cut) return false;
+  
+  return true;
+}
+
