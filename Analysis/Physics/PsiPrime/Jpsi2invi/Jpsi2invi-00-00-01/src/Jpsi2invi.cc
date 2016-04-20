@@ -57,11 +57,17 @@ private:
   NTuple::Tuple* m_tuple8;
   NTuple::Item<long> m_run;
   NTuple::Item<long> m_event;
+
+  // vertex 
   NTuple::Item<double> m_vr0;
   NTuple::Item<double> m_vz0;
+
+  // check MDC and EMC match
+  NTuple::Item<long> m_pion_matched;
+  NTuple::Item<long> m_lep_matched;
+
   
   // functions
-  bool getGeneralInfo();
   bool passPreSelection();
   bool passVertexSelection(CLHEP::Hep3Vector, RecMdcKalTrack* ); 
   CLHEP::Hep3Vector getOrigin(); 
@@ -116,6 +122,8 @@ StatusCode Jpsi2invi::initialize(){
     status = m_tuple8->addItem ("event", m_event );
     status = m_tuple8->addItem ("vr0", m_vr0 );
     status = m_tuple8->addItem ("vz0", m_vz0 );
+    status = m_tuple8->addItem ("pionmat", m_pion_matched);
+    status = m_tuple8->addItem ("lepmat", m_lep_matched);
     }
     
     else    { 
@@ -137,7 +145,6 @@ StatusCode Jpsi2invi::execute() {
   MsgStream log(msgSvc(), name());
   log << MSG::INFO << "in execute()" << endreq;
 
-  if (!getGeneralInfo()) return StatusCode::FAILURE; 
   if (!passPreSelection()) return StatusCode::FAILURE; 
   m_tuple8->write();
   
@@ -155,8 +162,8 @@ StatusCode Jpsi2invi::finalize() {
 Jpsi2invi::~Jpsi2invi() {
 }
 
+bool Jpsi2invi::passPreSelection() {
 
-bool Jpsi2invi::getGeneralInfo() {
   MsgStream log(msgSvc(), name());
   SmartDataPtr<Event::EventHeader>eventHeader(eventSvc(),"/Event/EventHeader");
   if(!eventHeader){
@@ -165,10 +172,7 @@ bool Jpsi2invi::getGeneralInfo() {
   }
   m_run = eventHeader->runNumber();
   m_event = eventHeader->eventNumber();
-  return true;
-}
 
-bool Jpsi2invi::passPreSelection() {
   SmartDataPtr<EvtRecEvent>evtRecEvent(eventSvc(),"/Event/EvtRec/EvtRecEvent");
   if(!evtRecEvent) return false; 
 
@@ -177,6 +181,13 @@ bool Jpsi2invi::passPreSelection() {
 
   CLHEP::Hep3Vector xorigin = getOrigin(); 
 
+  // Good Kalman Track
+  std::vector<int> iGood;
+  iGood.clear();
+  int nCharge = 0;
+  m_pion_matched = 0;
+  m_lep_matched = 0;
+  
   // loop through charged tracks 
   for(int i = 0; i < evtRecEvent->totalCharged(); i++){
     // get mdcTrk 
@@ -190,6 +201,9 @@ bool Jpsi2invi::passPreSelection() {
 
     if (!passVertexSelection(xorigin, mdcTrk) ) continue; 
 
+    iGood.push_back(i);
+    nCharge += mdcTrk->charge();
+    
   }
   
   return true; 
@@ -228,5 +242,7 @@ bool Jpsi2invi::passVertexSelection(CLHEP::Hep3Vector xorigin,
   if(fabs(m_vr0) >= m_vr0cut) return false;
   
   return true;
+  
 }
+
 
