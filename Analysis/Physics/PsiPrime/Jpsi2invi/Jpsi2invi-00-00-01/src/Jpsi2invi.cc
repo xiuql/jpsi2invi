@@ -50,6 +50,7 @@ private:
   // Declare r0, z0 cut for charged tracks
   double m_vr0cut, m_vz0cut;
   double m_distin_pionlep;
+  double m_cha_costheta_cut; 
 
   // Define Ntuples
   
@@ -102,6 +103,7 @@ Jpsi2invi::Jpsi2invi(const std::string& name, ISvcLocator* pSvcLocator) :
   declareProperty("Vr0cut", m_vr0cut=1.0);
   declareProperty("Vz0cut", m_vz0cut=10.0);
   declareProperty("DiffPionLep", m_distin_pionlep=0.8);
+  declareProperty("ChaCosthetaCut", m_cha_costheta_cut=0.93);
 
 }
 
@@ -192,15 +194,22 @@ bool Jpsi2invi::passPreSelection() {
   for(int i = 0; i < evtRecEvent->totalCharged(); i++){
     // get mdcTrk 
     EvtRecTrackIterator itTrk=evtRecTrkCol->begin() + i;
+
+    // Good Kalman Track 
     if(! ((*itTrk)->isMdcKalTrackValid()) ) continue;
+    
     RecMdcKalTrack* mdcTrk = (*itTrk)->mdcKalTrack();
     if(mdcTrk->p()<m_distin_pionlep)
       mdcTrk->setPidType(RecMdcKalTrack::pion);
     else
       mdcTrk->setPidType(RecMdcKalTrack::muon);
 
+    // Good Vertex 
     if (!passVertexSelection(xorigin, mdcTrk) ) continue; 
 
+    // Polar angle cut
+    if(fabs(cos(mdcTrk->theta())) > m_cha_costheta_cut) continue;
+    
     iGood.push_back(i);
     nCharge += mdcTrk->charge();
     
