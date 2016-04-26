@@ -51,7 +51,10 @@ private:
   double m_vr0cut, m_vz0cut;
   double m_distin_pionlep;
   double m_cha_costheta_cut; 
-
+  double m_total_number_of_charged_max; 
+  double m_min_emctime;
+  double m_max_emctime;
+  
   // Define Ntuples
   
   // general info 
@@ -71,7 +74,8 @@ private:
   // functions
   bool passPreSelection();
   bool passVertexSelection(CLHEP::Hep3Vector, RecMdcKalTrack* ); 
-  CLHEP::Hep3Vector getOrigin(); 
+  CLHEP::Hep3Vector getOrigin();
+  bool passPhotonSelection(EvtRecTrackIterator); 
   
 }; 
 
@@ -104,6 +108,9 @@ Jpsi2invi::Jpsi2invi(const std::string& name, ISvcLocator* pSvcLocator) :
   declareProperty("Vz0cut", m_vz0cut=10.0);
   declareProperty("DiffPionLep", m_distin_pionlep=0.8);
   declareProperty("ChaCosthetaCut", m_cha_costheta_cut=0.93);
+  declareProperty("TotalNumberOfChargedMax", m_total_number_of_charged_max=50);
+  declareProperty("MinEstCut", m_min_emctime=0.0);
+  declareProperty("MaxEstCut", m_max_emctime=14.0);
 
 }
 
@@ -209,11 +216,22 @@ bool Jpsi2invi::passPreSelection() {
 
     // Polar angle cut
     if(fabs(cos(mdcTrk->theta())) > m_cha_costheta_cut) continue;
-    
+
     iGood.push_back(i);
     nCharge += mdcTrk->charge();
     
+  } // end charged tracks
+
+  // loop through neutral tracks
+  for(int i=evtRecEvent->totalCharged(); i< evtRecEvent->totalTracks(); i++) {
+    if (i > m_total_number_of_charged_max) break;
+
+    EvtRecTrackIterator itTrk = evtRecTrkCol->begin() + i ;
+    // Photon selection
+    if (!passPhotonSelection(itTrk) ) continue;
+   
   }
+  
   
   return true; 
 }
@@ -255,3 +273,18 @@ bool Jpsi2invi::passVertexSelection(CLHEP::Hep3Vector xorigin,
 }
 
 
+bool Jpsi2invi::passPhotonSelection(EvtRecTrackIterator itTrk) {
+  if(!(*itTrk)->isEmcShowerValid())
+    return false;
+
+  RecEmcShower *emcTrk = (*itTrk)->emcShower();
+
+  // TDC window
+  if (emcTrk->time() < m_min_emctime || emcTrk->time() > m_max_emctime)
+    return false;
+
+  // Energy threshold
+  double m_abs_costhe(fabs(cos(emcTrk->theta())));
+  
+  return true; 
+}
