@@ -54,6 +54,12 @@ private:
   double m_total_number_of_charged_max; 
   double m_min_emctime;
   double m_max_emctime;
+  double m_costheta_barrel_max;
+  double m_costheta_endcap_min;
+  double m_costheta_endcap_max;
+  double m_energy_barrel_min;
+  double m_energy_endcap_min; 
+
   
   // Define Ntuples
   
@@ -111,6 +117,11 @@ Jpsi2invi::Jpsi2invi(const std::string& name, ISvcLocator* pSvcLocator) :
   declareProperty("TotalNumberOfChargedMax", m_total_number_of_charged_max=50);
   declareProperty("MinEstCut", m_min_emctime=0.0);
   declareProperty("MaxEstCut", m_max_emctime=14.0);
+  declareProperty("CosthetaBarrelMax", m_costheta_barrel_max=0.8);
+  declareProperty("CosthetaEndcapMin", m_costheta_endcap_min=0.86);
+  declareProperty("CosthetaEndcapMax", m_costheta_endcap_max=0.92);
+  declareProperty("EnergyBarrelMin", m_energy_barrel_min=0.025); 
+  declareProperty("EnergyEndcapMin", m_energy_endcap_min=0.050); 
 
 }
 
@@ -280,11 +291,20 @@ bool Jpsi2invi::passPhotonSelection(EvtRecTrackIterator itTrk) {
   RecEmcShower *emcTrk = (*itTrk)->emcShower();
 
   // TDC window
-  if (emcTrk->time() < m_min_emctime || emcTrk->time() > m_max_emctime)
+  if ( !(emcTrk->time() >= m_min_emctime && emcTrk->time() <= m_max_emctime) )
     return false;
 
   // Energy threshold
-  double m_abs_costhe(fabs(cos(emcTrk->theta())));
+  double abs_costheta(fabs(cos(emcTrk->theta())));
+
+  bool barrel = (abs_costheta < m_costheta_barrel_max); 
+  bool endcap = (abs_costheta > m_costheta_endcap_min && abs_costheta < m_costheta_barrel_max);
+
+  double eraw = emcTrk->energy();
   
+  if ( !( (barrel && eraw > m_energy_barrel_min) || (endcap && eraw > m_energy_endcap_min)))
+    return false ; 
+
+    
   return true; 
 }
