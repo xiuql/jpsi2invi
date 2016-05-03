@@ -79,10 +79,13 @@ private:
 
   // jpsi2invi
   NTuple::Item<int> m_ntrk; 
+  NTuple::Item<int> m_npho; 
   
   // functions
   void buildJpsiToInvisible();
   int selectChargedTracks(SmartDataPtr<EvtRecEvent>, SmartDataPtr<EvtRecTrackCol>); 
+  int selectPhotons(SmartDataPtr<EvtRecEvent>, SmartDataPtr<EvtRecTrackCol>);
+  
   bool passPreSelection();
   bool passVertexSelection(CLHEP::Hep3Vector, RecMdcKalTrack* ); 
   CLHEP::Hep3Vector getOrigin();
@@ -151,6 +154,7 @@ StatusCode Jpsi2invi::initialize(){
     status = m_tuple8->addItem ("pionmat", m_pion_matched);
     status = m_tuple8->addItem ("lepmat", m_lep_matched);
     status = m_tuple8->addItem ("ntrk", m_ntrk);
+    status = m_tuple8->addItem ("npho", m_npho);
     }
     
     else    { 
@@ -208,7 +212,7 @@ void Jpsi2invi::buildJpsiToInvisible() {
 
   // the number of good charged tracks
   m_ntrk = selectChargedTracks(evtRecEvent, evtRecTrkCol);
-  // npho = selectPhotons();
+  m_npho = selectPhotons(evtRecEvent, evtRecTrkCol);
   // save pion momentum
   // save PID(dEdx + TOF)
   // save costhetapipi
@@ -407,5 +411,71 @@ int Jpsi2invi::selectChargedTracks(SmartDataPtr<EvtRecEvent> evtRecEvent,
   } // end charged tracks
 
   return iGood.size(); 
+  
+}
+
+int Jpsi2invi::selectPhotons(SmartDataPtr<EvtRecEvent> evtRecEvent,
+			     SmartDataPtr<EvtRecTrackCol> evtRecTrkCol) {
+
+  std::vector<int> iGam;
+  iGam.clear();
+  
+  // loop through neutral tracks
+  for(int i=evtRecEvent->totalCharged(); i< evtRecEvent->totalTracks(); i++) {
+    if (i > m_total_number_of_charged_max) break;
+
+    EvtRecTrackIterator itTrk = evtRecTrkCol->begin() + i ;
+    if(!(*itTrk)->isEmcShowerValid()) continue;
+    RecEmcShower *emcTrk = (*itTrk)->emcShower();
+
+    // TDC window
+    if ( !(emcTrk->time() >= m_min_emctime && emcTrk->time() <= m_max_emctime) )
+      continue; 
+
+    // Energy threshold
+    double abs_costheta(fabs(cos(emcTrk->theta())));
+    bool barrel = (abs_costheta < m_costheta_barrel_max); 
+    bool endcap = (abs_costheta > m_costheta_endcap_min
+		   && abs_costheta < m_costheta_barrel_max);
+    double eraw = emcTrk->energy();
+    
+    if ( !( (barrel && eraw > m_energy_barrel_min)
+	    || (endcap && eraw > m_energy_endcap_min)))  continue; 
+
+    // photon isolation: the opening angle between a candidate shower
+    // and the closest charged track should be larger than 10 degree 
+    CLHEP::Hep3Vector emcpos(emcTrk->x(), emcTrk->y(), emcTrk->z());
+    
+    // find the nearest charged track
+    double dthe = 200.;
+    double dphi = 200.;
+    double dang = 200.; 
+    for(int j = 0; j < evtRecEvent->totalCharged(); j++) {
+      EvtRecTrackIterator jtTrk = evtRecTrkCol->begin() + j;
+      if(!(*jtTrk)->isExtTrackValid()) continue;
+      RecExtTrack *extTrk = (*jtTrk)->extTrack();
+      if(extTrk->emcVolumeNumber() == -1) continue;
+      CLHEP::Hep3Vector extpos = extTrk->emcPosition();
+      double angd = extpos.angle(emcpos);
+      double thed = extpos.theta() - emcpos.theta();
+      double phid = extpos.deltaPhi(emcpos);
+      thed = fmod(thed+CLHEP::twopi+CLHEP::twopi+pi, CLHEP::twopi) - CLHEP::pi;
+      phid = fmod(phid+CLHEP::twopi+CLHEP::twopi+pi, CLHEP::twopi) - CLHEP::pi;
+
+      if(fabs(thed) < fabs(dthe)) dthe = thed;
+      if(fabs(phid) < fabs(dphi)) dphi = phid;
+      if(angd < dang) dang = angd;	    
+    }
+
+    if(dang>=200) continue;
+    dthe = dthe * 180 / (CLHEP::pi);
+    dphi = dphi * 180 / (CLHEP::pi);
+    dang = dang * 180 / (CLHEP::pi);
+    if (dang < m_photon_iso_angle_min ) continue; 
+
+    iGam.push_back(i); 
+  } // end loop neutral tracks     
+
+  return iGam.size(); 
   
 }
