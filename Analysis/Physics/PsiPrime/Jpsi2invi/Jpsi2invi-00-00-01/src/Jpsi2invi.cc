@@ -77,8 +77,12 @@ private:
   NTuple::Item<long> m_pion_matched;
   NTuple::Item<long> m_lep_matched;
 
+  // jpsi2invi
+  NTuple::Item<int> m_ntrk; 
   
   // functions
+  void buildJpsiToInvisible();
+  int selectChargedTracks(SmartDataPtr<EvtRecEvent>, SmartDataPtr<EvtRecTrackCol>); 
   bool passPreSelection();
   bool passVertexSelection(CLHEP::Hep3Vector, RecMdcKalTrack* ); 
   CLHEP::Hep3Vector getOrigin();
@@ -146,6 +150,7 @@ StatusCode Jpsi2invi::initialize(){
     status = m_tuple8->addItem ("vz0", m_vz0 );
     status = m_tuple8->addItem ("pionmat", m_pion_matched);
     status = m_tuple8->addItem ("lepmat", m_lep_matched);
+    status = m_tuple8->addItem ("ntrk", m_ntrk);
     }
     
     else    { 
@@ -167,7 +172,16 @@ StatusCode Jpsi2invi::execute() {
   MsgStream log(msgSvc(), name());
   log << MSG::INFO << "in execute()" << endreq;
 
-  if (!passPreSelection()) return StatusCode::FAILURE; 
+  SmartDataPtr<Event::EventHeader>eventHeader(eventSvc(),"/Event/EventHeader");
+  if(!eventHeader) return StatusCode::FAILURE;
+
+  m_run = eventHeader->runNumber();
+  m_event = eventHeader->eventNumber();
+
+
+  if (!passPreSelection()) return StatusCode::FAILURE;
+  buildJpsiToInvisible();
+  
   m_tuple8->write();
   
 
@@ -183,6 +197,26 @@ StatusCode Jpsi2invi::finalize() {
 
 Jpsi2invi::~Jpsi2invi() {
 }
+
+void Jpsi2invi::buildJpsiToInvisible() {
+
+  SmartDataPtr<EvtRecEvent>evtRecEvent(eventSvc(),"/Event/EvtRec/EvtRecEvent");
+  if(!evtRecEvent) return;
+
+  SmartDataPtr<EvtRecTrackCol> evtRecTrkCol(eventSvc(), "/Event/EvtRec/EvtRecTrackCol");
+  if(!evtRecTrkCol) return;
+
+  // the number of good charged tracks
+  m_ntrk = selectChargedTracks(evtRecEvent, evtRecTrkCol);
+  // npho = selectPhotons();
+  // save pion momentum
+  // save PID(dEdx + TOF)
+  // save costhetapipi
+  // save costhetapipisys
+  // save Mpipi
+
+}
+
 
 bool Jpsi2invi::passPreSelection() {
 
@@ -340,4 +374,38 @@ bool Jpsi2invi::passPhotonSelection(SmartDataPtr<EvtRecEvent> evtRecEvent,
   } // end loop neutral tracks 
     
   return true; 
+}
+
+
+int Jpsi2invi::selectChargedTracks(SmartDataPtr<EvtRecEvent> evtRecEvent,
+				   SmartDataPtr<EvtRecTrackCol> evtRecTrkCol) {
+
+  CLHEP::Hep3Vector xorigin = getOrigin(); 
+
+  // Good Kalman Track
+  std::vector<int> iGood;
+  iGood.clear();
+  
+  // loop through charged tracks 
+  for(int i = 0; i < evtRecEvent->totalCharged(); i++){
+    // get mdcTrk 
+    EvtRecTrackIterator itTrk=evtRecTrkCol->begin() + i;
+
+    // Good Kalman Track 
+    if(! ((*itTrk)->isMdcKalTrackValid()) ) continue;
+    
+    RecMdcKalTrack* mdcTrk = (*itTrk)->mdcKalTrack();
+
+    // Good Vertex 
+    if (!passVertexSelection(xorigin, mdcTrk) ) continue; 
+
+    // Polar angle cut
+    if(fabs(cos(mdcTrk->theta())) > m_cha_costheta_cut) continue;
+
+    iGood.push_back(i);
+    
+  } // end charged tracks
+
+  return iGood.size(); 
+  
 }
