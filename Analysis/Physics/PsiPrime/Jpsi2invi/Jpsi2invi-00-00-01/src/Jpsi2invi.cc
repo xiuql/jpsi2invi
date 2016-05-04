@@ -5,7 +5,7 @@
 //
 // Original Author:  SHI Xin <shixin@ihep.ac.cn>
 //         Created:  [2016-03-23 Wed 09:12] 
-//         Inspired by Zhu's psi' --> J/psi pi pi example code 
+//         Inspired by Zhu and Zhang's code 
 //
 
 
@@ -65,7 +65,7 @@ private:
   // Define Ntuples
   
   // general info 
-  NTuple::Tuple* m_tuple8;
+  NTuple::Tuple* m_tuple1;
   NTuple::Item<long> m_run;
   NTuple::Item<long> m_event;
 
@@ -82,6 +82,7 @@ private:
   NTuple::Item<int> m_npho; 
   
   // functions
+  bool book_ntuple_signal(MsgStream); 
   void buildJpsiToInvisible();
   int selectChargedTracks(SmartDataPtr<EvtRecEvent>, SmartDataPtr<EvtRecTrackCol>); 
   int selectPhotons(SmartDataPtr<EvtRecEvent>, SmartDataPtr<EvtRecTrackCol>);
@@ -139,30 +140,8 @@ StatusCode Jpsi2invi::initialize(){
   MsgStream log(msgSvc(), name());
   log << MSG::INFO << ">>>>>>> in initialize()" << endmsg;
 
-  StatusCode status;
+  if (! book_ntuple_signal(log) ) return StatusCode::FAILURE;
 
-  NTuplePtr nt8(ntupleSvc(), "FILE1/infmom");
-  if ( nt8 ) m_tuple8 = nt8;
-  else {
-    m_tuple8 = ntupleSvc()->book ("FILE1/infmom", CLID_ColumnWiseTuple, 
-				  "information with momentum method");
-    if ( m_tuple8 )    {
-    status = m_tuple8->addItem ("run", m_run );
-    status = m_tuple8->addItem ("event", m_event );
-    status = m_tuple8->addItem ("vr0", m_vr0 );
-    status = m_tuple8->addItem ("vz0", m_vz0 );
-    status = m_tuple8->addItem ("pionmat", m_pion_matched);
-    status = m_tuple8->addItem ("lepmat", m_lep_matched);
-    status = m_tuple8->addItem ("ntrk", m_ntrk);
-    status = m_tuple8->addItem ("npho", m_npho);
-    }
-    
-    else    { 
-      log << MSG::ERROR << "    Cannot book N-tuple:" 
-	  << long(m_tuple8) << endmsg;
-      return StatusCode::FAILURE;
-    }
-  }
 
   //--------end booking --------
 
@@ -183,10 +162,10 @@ StatusCode Jpsi2invi::execute() {
   m_event = eventHeader->eventNumber();
 
 
-  if (!passPreSelection()) return StatusCode::FAILURE;
+  //if (!passPreSelection()) return StatusCode::FAILURE;
   buildJpsiToInvisible();
   
-  m_tuple8->write();
+  m_tuple1->write();
   
 
 }
@@ -201,6 +180,33 @@ StatusCode Jpsi2invi::finalize() {
 
 Jpsi2invi::~Jpsi2invi() {
 }
+
+
+bool Jpsi2invi::book_ntuple_signal(MsgStream log) {
+  StatusCode status;
+
+  NTuplePtr nt1(ntupleSvc(), "FILE1/signal");
+  if ( nt1 ) m_tuple1 = nt1;
+  else {
+    m_tuple1 = ntupleSvc()->book ("FILE1/signal", CLID_ColumnWiseTuple, "signal");
+    if ( m_tuple1 ) {
+      status = m_tuple1->addItem ("run", m_run );
+      status = m_tuple1->addItem ("event", m_event );
+      status = m_tuple1->addItem ("vr0", m_vr0 );
+      status = m_tuple1->addItem ("vz0", m_vz0 );
+      status = m_tuple1->addItem ("pionmat", m_pion_matched);
+      status = m_tuple1->addItem ("lepmat", m_lep_matched);
+      status = m_tuple1->addItem ("ntrk", m_ntrk);
+      status = m_tuple1->addItem ("npho", m_npho);
+    } else { 
+      log << MSG::ERROR << "    Cannot book N-tuple:" 
+	  << long(m_tuple1) << endmsg;
+      return false;
+    }
+  }
+  return true; 
+}
+
 
 void Jpsi2invi::buildJpsiToInvisible() {
 
@@ -283,11 +289,9 @@ bool Jpsi2invi::passPreSelection() {
 CLHEP::Hep3Vector Jpsi2invi::getOrigin() {
   CLHEP::Hep3Vector xorigin(0,0,0);
   IVertexDbSvc*  vtxsvc;
-  double *dbv, *vv;
   Gaudi::svcLocator()->service("VertexDbSvc", vtxsvc);
   if(vtxsvc->isVertexValid()){
-    dbv = vtxsvc->PrimaryVertex(); 
-    vv = vtxsvc->SigmaPrimaryVertex();  
+    double *dbv = vtxsvc->PrimaryVertex(); 
     xorigin.setX(dbv[0]);
     xorigin.setY(dbv[1]);
     xorigin.setZ(dbv[2]);
@@ -389,6 +393,10 @@ int Jpsi2invi::selectChargedTracks(SmartDataPtr<EvtRecEvent> evtRecEvent,
   // Good Kalman Track
   std::vector<int> iGood;
   iGood.clear();
+  std::vector<int> iPGood;
+  iPGood.clear();
+  std::vector<int> iMGood;
+  iMGood.clear();
   
   // loop through charged tracks 
   for(int i = 0; i < evtRecEvent->totalCharged(); i++){
@@ -396,8 +404,9 @@ int Jpsi2invi::selectChargedTracks(SmartDataPtr<EvtRecEvent> evtRecEvent,
     EvtRecTrackIterator itTrk=evtRecTrkCol->begin() + i;
 
     // Good Kalman Track 
-    if(! ((*itTrk)->isMdcKalTrackValid()) ) continue;
-    
+    if(!(*itTrk)->isMdcKalTrackValid()) continue;
+
+    if(!(*itTrk)->isMdcTrackValid()) continue;
     RecMdcKalTrack* mdcTrk = (*itTrk)->mdcKalTrack();
 
     // Good Vertex 
@@ -406,7 +415,10 @@ int Jpsi2invi::selectChargedTracks(SmartDataPtr<EvtRecEvent> evtRecEvent,
     // Polar angle cut
     if(fabs(cos(mdcTrk->theta())) > m_cha_costheta_cut) continue;
 
-    iGood.push_back(i);
+    iGood.push_back((*itTrk)->trackId());
+    if(mdcTrk->charge()>0) iPGood.push_back((*itTrk)->trackId());
+    if(mdcTrk->charge()<0) iMGood.push_back((*itTrk)->trackId());
+
     
   } // end charged tracks
 
