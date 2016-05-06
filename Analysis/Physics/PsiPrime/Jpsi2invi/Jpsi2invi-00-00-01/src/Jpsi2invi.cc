@@ -54,6 +54,7 @@ private:
   double m_total_number_of_charged_max; 
   double m_min_emctime;
   double m_max_emctime;
+  double m_gammaCosCut; 
   double m_costheta_barrel_max;
   double m_costheta_endcap_min;
   double m_costheta_endcap_max;
@@ -96,7 +97,7 @@ private:
   bool book_ntuple_signal(MsgStream); 
   void buildJpsiToInvisible();
   int selectChargedTracks(SmartDataPtr<EvtRecEvent>, SmartDataPtr<EvtRecTrackCol>); 
-  int selectPhotons(SmartDataPtr<EvtRecEvent>, SmartDataPtr<EvtRecTrackCol>);
+  int selectNeutralTracks(SmartDataPtr<EvtRecEvent>, SmartDataPtr<EvtRecTrackCol>);
   
   bool passPreSelection();
   bool passVertexSelection(CLHEP::Hep3Vector, RecMdcKalTrack* ); 
@@ -137,6 +138,7 @@ Jpsi2invi::Jpsi2invi(const std::string& name, ISvcLocator* pSvcLocator) :
   declareProperty("TotalNumberOfChargedMax", m_total_number_of_charged_max=50);
   declareProperty("MinEstCut", m_min_emctime=0.0);
   declareProperty("MaxEstCut", m_max_emctime=14.0);
+  declareProperty("GammaCosCut",  m_gammaCosCut= 0.93); 
   declareProperty("CosthetaBarrelMax", m_costheta_barrel_max=0.8);
   declareProperty("CosthetaEndcapMin", m_costheta_endcap_min=0.86);
   declareProperty("CosthetaEndcapMax", m_costheta_endcap_max=0.92);
@@ -214,6 +216,11 @@ bool Jpsi2invi::book_ntuple_signal(MsgStream log) {
       // vertex
       status = m_tuple1->addItem ("vr0", m_vr0 );
       status = m_tuple1->addItem ("vz0", m_vz0 );
+
+      // neutral tracks
+      status = m_tuple1->addItem ("nshow",  m_nshow);
+      status = m_tuple1->addItem ("ngam",  m_ngam);
+
       
     } else { 
       log << MSG::ERROR << "    Cannot book N-tuple:" 
@@ -235,7 +242,7 @@ void Jpsi2invi::buildJpsiToInvisible() {
 
   // the number of good charged tracks
   selectChargedTracks(evtRecEvent, evtRecTrkCol);
-  // m_npho = selectPhotons(evtRecEvent, evtRecTrkCol);
+  selectNeutralTracks(evtRecEvent, evtRecTrkCol);
   // save pion momentum
   // save PID(dEdx + TOF)
   // save costhetapipi
@@ -367,7 +374,11 @@ bool Jpsi2invi::passPhotonSelection(SmartDataPtr<EvtRecEvent> evtRecEvent,
     // photon isolation: the opening angle between a candidate shower
     // and the closest charged track should be larger than 10 degree 
     CLHEP::Hep3Vector emcpos(emcTrk->x(), emcTrk->y(), emcTrk->z());
-    
+
+    // EMC costheta cut 
+    double costhe = cos(emcpos.theta());
+    if ( fabs(costhe) >= m_gammaCosCut) continue;
+
     // find the nearest charged track
     double dthe = 200.;
     double dphi = 200.;
@@ -448,12 +459,14 @@ int Jpsi2invi::selectChargedTracks(SmartDataPtr<EvtRecEvent> evtRecEvent,
   
 }
 
-int Jpsi2invi::selectPhotons(SmartDataPtr<EvtRecEvent> evtRecEvent,
-			     SmartDataPtr<EvtRecTrackCol> evtRecTrkCol) {
+int Jpsi2invi::selectNeutralTracks(SmartDataPtr<EvtRecEvent> evtRecEvent,
+				   SmartDataPtr<EvtRecTrackCol> evtRecTrkCol) {
 
   std::vector<int> iGam;
   iGam.clear();
-  
+  std::vector<int> iShow;
+  iShow.clear();
+
   // loop through neutral tracks
   for(int i=evtRecEvent->totalCharged(); i< evtRecEvent->totalTracks(); i++) {
     if (i > m_total_number_of_charged_max) break;
@@ -461,7 +474,8 @@ int Jpsi2invi::selectPhotons(SmartDataPtr<EvtRecEvent> evtRecEvent,
     EvtRecTrackIterator itTrk = evtRecTrkCol->begin() + i ;
     if(!(*itTrk)->isEmcShowerValid()) continue;
     RecEmcShower *emcTrk = (*itTrk)->emcShower();
-
+    iShow.push_back((*itTrk)->trackId());
+    
     // TDC window
     if ( !(emcTrk->time() >= m_min_emctime && emcTrk->time() <= m_max_emctime) )
       continue; 
@@ -479,6 +493,10 @@ int Jpsi2invi::selectPhotons(SmartDataPtr<EvtRecEvent> evtRecEvent,
     // photon isolation: the opening angle between a candidate shower
     // and the closest charged track should be larger than 10 degree 
     CLHEP::Hep3Vector emcpos(emcTrk->x(), emcTrk->y(), emcTrk->z());
+
+    // EMC costheta cut 
+    double costhe = cos(emcpos.theta());
+    if ( fabs(costhe) >= m_gammaCosCut) continue;
     
     // find the nearest charged track
     double dthe = 200.;
@@ -507,8 +525,11 @@ int Jpsi2invi::selectPhotons(SmartDataPtr<EvtRecEvent> evtRecEvent,
     dang = dang * 180 / (CLHEP::pi);
     if (dang < m_photon_iso_angle_min ) continue; 
 
-    iGam.push_back(i); 
+    iGam.push_back((*itTrk)->trackId());
   } // end loop neutral tracks     
+
+  m_ngam = iGam.size();
+  m_nshow = iShow.size(); 
 
   return iGam.size(); 
   
