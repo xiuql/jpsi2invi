@@ -40,7 +40,7 @@
 class Jpsi2invi : public Algorithm {
   
 public:
-  Jpsi2invi(const std::string& name, ISvcLocator* pSvcLocator);
+  Jpsi2invi(const std::string&, ISvcLocator*);
   ~Jpsi2invi(); 
   StatusCode initialize();
   StatusCode execute();
@@ -64,10 +64,21 @@ private:
   
   // Define Ntuples
   
-  // general info 
+  // signal 
   NTuple::Tuple* m_tuple1;
-  NTuple::Item<long> m_run;
-  NTuple::Item<long> m_event;
+
+  // common info 
+  NTuple::Item<int> m_run;
+  NTuple::Item<int> m_event;
+
+  // charged tracks
+  NTuple::Item<int> m_ncharged;
+  NTuple::Item<int> m_nptrk;
+  NTuple::Item<int> m_nmtrk;
+  
+  // neutral tracks
+  NTuple::Item<int> m_nshow;
+  NTuple::Item<int> m_ngam;
 
   // vertex 
   NTuple::Item<double> m_vr0;
@@ -190,14 +201,20 @@ bool Jpsi2invi::book_ntuple_signal(MsgStream log) {
   else {
     m_tuple1 = ntupleSvc()->book ("FILE1/signal", CLID_ColumnWiseTuple, "signal");
     if ( m_tuple1 ) {
-      status = m_tuple1->addItem ("run", m_run );
-      status = m_tuple1->addItem ("event", m_event );
+
+      // common info
+      status = m_tuple1->addItem ("run",   m_run);
+      status = m_tuple1->addItem ("event", m_event);
+
+      // charged tracks  
+      status = m_tuple1->addItem ("ncharged", m_ncharged);
+      status = m_tuple1->addItem ("nptrk", m_nptrk);
+      status = m_tuple1->addItem ("nmtrk", m_nmtrk);
+
+      // vertex
       status = m_tuple1->addItem ("vr0", m_vr0 );
       status = m_tuple1->addItem ("vz0", m_vz0 );
-      status = m_tuple1->addItem ("pionmat", m_pion_matched);
-      status = m_tuple1->addItem ("lepmat", m_lep_matched);
-      status = m_tuple1->addItem ("ntrk", m_ntrk);
-      status = m_tuple1->addItem ("npho", m_npho);
+      
     } else { 
       log << MSG::ERROR << "    Cannot book N-tuple:" 
 	  << long(m_tuple1) << endmsg;
@@ -217,8 +234,8 @@ void Jpsi2invi::buildJpsiToInvisible() {
   if(!evtRecTrkCol) return;
 
   // the number of good charged tracks
-  m_ntrk = selectChargedTracks(evtRecEvent, evtRecTrkCol);
-  m_npho = selectPhotons(evtRecEvent, evtRecTrkCol);
+  selectChargedTracks(evtRecEvent, evtRecTrkCol);
+  // m_npho = selectPhotons(evtRecEvent, evtRecTrkCol);
   // save pion momentum
   // save PID(dEdx + TOF)
   // save costhetapipi
@@ -415,6 +432,7 @@ int Jpsi2invi::selectChargedTracks(SmartDataPtr<EvtRecEvent> evtRecEvent,
     // Polar angle cut
     if(fabs(cos(mdcTrk->theta())) > m_cha_costheta_cut) continue;
 
+    iGood.push_back(i);
     iGood.push_back((*itTrk)->trackId());
     if(mdcTrk->charge()>0) iPGood.push_back((*itTrk)->trackId());
     if(mdcTrk->charge()<0) iMGood.push_back((*itTrk)->trackId());
@@ -422,6 +440,10 @@ int Jpsi2invi::selectChargedTracks(SmartDataPtr<EvtRecEvent> evtRecEvent,
     
   } // end charged tracks
 
+  m_ncharged = iGood.size();
+  m_nptrk = iPGood.size();
+  m_nmtrk = iMGood.size(); 
+  
   return iGood.size(); 
   
 }
