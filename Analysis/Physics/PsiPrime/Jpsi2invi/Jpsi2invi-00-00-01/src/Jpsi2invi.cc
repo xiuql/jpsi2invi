@@ -5,7 +5,7 @@
 //
 // Original Author:  SHI Xin <shixin@ihep.ac.cn>
 //         Created:  [2016-03-23 Wed 09:12] 
-//         Inspired by Zhu and Zhang's code 
+//         Inspired by Zhu Kai and Zhang Chi's code 
 //
 
 
@@ -61,6 +61,8 @@ private:
   double m_energy_barrel_min;
   double m_energy_endcap_min;
   double m_photon_iso_angle_min;
+  double m_pion_polar_angle_max;
+  double m_pion_momentum_max; 
 
   
   // Define Ntuples
@@ -96,13 +98,23 @@ private:
   // functions
   bool book_ntuple_signal(MsgStream); 
   void buildJpsiToInvisible();
-  int selectChargedTracks(SmartDataPtr<EvtRecEvent>, SmartDataPtr<EvtRecTrackCol>); 
-  int selectNeutralTracks(SmartDataPtr<EvtRecEvent>, SmartDataPtr<EvtRecTrackCol>);
+  int selectChargedTracks(SmartDataPtr<EvtRecEvent>,
+			  SmartDataPtr<EvtRecTrackCol>,
+			  std::vector<int> &,
+			  std::vector<int> &); 
+  int selectPionPlusPionMinus(SmartDataPtr<EvtRecTrackCol>,
+			      std::vector<int>,
+			      std::vector<int>);
+  
+  int selectNeutralTracks(SmartDataPtr<EvtRecEvent>,
+			  SmartDataPtr<EvtRecTrackCol>);
   
   bool passPreSelection();
-  bool passVertexSelection(CLHEP::Hep3Vector, RecMdcKalTrack* ); 
+  bool passVertexSelection(CLHEP::Hep3Vector,
+			   RecMdcKalTrack* ); 
   CLHEP::Hep3Vector getOrigin();
-  bool passPhotonSelection(SmartDataPtr<EvtRecEvent>, SmartDataPtr<EvtRecTrackCol>); 
+  bool passPhotonSelection(SmartDataPtr<EvtRecEvent>,
+			   SmartDataPtr<EvtRecTrackCol>); 
   
 }; 
 
@@ -144,7 +156,11 @@ Jpsi2invi::Jpsi2invi(const std::string& name, ISvcLocator* pSvcLocator) :
   declareProperty("CosthetaEndcapMax", m_costheta_endcap_max=0.92);
   declareProperty("EnergyBarrelMin", m_energy_barrel_min=0.025); 
   declareProperty("EnergyEndcapMin", m_energy_endcap_min=0.050); 
-  declareProperty("PhotonIsoAngleMin", m_photon_iso_angle_min=10); 
+  declareProperty("PhotonIsoAngleMin", m_photon_iso_angle_min=10);
+
+  declareProperty("PionPolarAngleMax", m_pion_polar_angle_max=0.8);
+  declareProperty("PionMomentumMax", m_pion_momentum_max=0.45); 
+  
 
 }
 
@@ -179,7 +195,7 @@ StatusCode Jpsi2invi::execute() {
   buildJpsiToInvisible();
   
   m_tuple1->write();
-  
+  return StatusCode::SUCCESS; 
 
 }
 
@@ -240,9 +256,16 @@ void Jpsi2invi::buildJpsiToInvisible() {
   SmartDataPtr<EvtRecTrackCol> evtRecTrkCol(eventSvc(), "/Event/EvtRec/EvtRecTrackCol");
   if(!evtRecTrkCol) return;
 
-  // the number of good charged tracks
-  selectChargedTracks(evtRecEvent, evtRecTrkCol);
+  std::vector<int> iPGood; 
+  std::vector<int> iMGood; 
+  selectChargedTracks(evtRecEvent, evtRecTrkCol, iPGood, iMGood);
+
+  selectPionPlusPionMinus(evtRecTrkCol, iPGood, iMGood); 
+  
   selectNeutralTracks(evtRecEvent, evtRecTrkCol);
+
+  
+
   // save pion momentum
   // save PID(dEdx + TOF)
   // save costhetapipi
@@ -414,16 +437,18 @@ bool Jpsi2invi::passPhotonSelection(SmartDataPtr<EvtRecEvent> evtRecEvent,
 
 
 int Jpsi2invi::selectChargedTracks(SmartDataPtr<EvtRecEvent> evtRecEvent,
-				   SmartDataPtr<EvtRecTrackCol> evtRecTrkCol) {
+				   SmartDataPtr<EvtRecTrackCol> evtRecTrkCol,
+				   std::vector<int> & iPGood,
+				   std::vector<int> & iMGood) {
 
   CLHEP::Hep3Vector xorigin = getOrigin(); 
 
   // Good Kalman Track
   std::vector<int> iGood;
   iGood.clear();
-  std::vector<int> iPGood;
+  // std::vector<int> iPGood;
   iPGood.clear();
-  std::vector<int> iMGood;
+  //std::vector<int> iMGood;
   iMGood.clear();
   
   // loop through charged tracks 
@@ -443,7 +468,6 @@ int Jpsi2invi::selectChargedTracks(SmartDataPtr<EvtRecEvent> evtRecEvent,
     // Polar angle cut
     if(fabs(cos(mdcTrk->theta())) > m_cha_costheta_cut) continue;
 
-    iGood.push_back(i);
     iGood.push_back((*itTrk)->trackId());
     if(mdcTrk->charge()>0) iPGood.push_back((*itTrk)->trackId());
     if(mdcTrk->charge()<0) iMGood.push_back((*itTrk)->trackId());
@@ -458,6 +482,42 @@ int Jpsi2invi::selectChargedTracks(SmartDataPtr<EvtRecEvent> evtRecEvent,
   return iGood.size(); 
   
 }
+
+int Jpsi2invi::selectPionPlusPionMinus(SmartDataPtr<EvtRecTrackCol> evtRecTrkCol,
+				       std::vector<int> iPGood,
+				       std::vector<int> iMGood) {
+
+  int npipi = 0;
+
+  for(unsigned int i1 = 0; i1 < iPGood.size(); i1++) {
+    EvtRecTrackIterator itTrk_p = evtRecTrkCol->begin() + iPGood[i1];
+    RecMdcTrack* mdcTrk_p = (*itTrk_p)->mdcTrack();
+    if (mdcTrk_p->charge() < 0) continue; // only positive charged tracks
+
+
+    for(unsigned int i2 = 0; i2 < iMGood.size(); i2++) {
+      EvtRecTrackIterator itTrk_m = evtRecTrkCol->begin() + iMGood[i2];
+      RecMdcTrack* mdcTrk_m = (*itTrk_m)->mdcTrack();
+      if (mdcTrk_m->charge() > 0) continue; // only negative charged tracks
+
+      // polar angle for both pions
+      if ( ! ( fabs(cos(mdcTrk_p->theta())) < m_pion_polar_angle_max &&
+	       fabs(cos(mdcTrk_m->theta())) < m_pion_polar_angle_max )) continue;  
+
+      // pion momentum
+      if ( ! ( fabs(mdcTrk_p->p()) < m_pion_momentum_max  &&
+	       fabs(mdcTrk_m->p()) < m_pion_momentum_max )) continue; 
+
+      // track PID
+      // double pion
+      // calcTrackPID() 
+    }
+  } 
+  
+  return npipi; 
+}
+
+
 
 int Jpsi2invi::selectNeutralTracks(SmartDataPtr<EvtRecEvent> evtRecEvent,
 				   SmartDataPtr<EvtRecTrackCol> evtRecTrkCol) {
