@@ -33,6 +33,9 @@
 #include "VertexFit/IVertexDbSvc.h"
 #include "VertexFit/Helix.h"
 
+#include "ParticleID/ParticleID.h"
+
+
 //
 // class declaration
 //
@@ -62,7 +65,8 @@ private:
   double m_energy_endcap_min;
   double m_photon_iso_angle_min;
   double m_pion_polar_angle_max;
-  double m_pion_momentum_max; 
+  double m_pion_momentum_max;
+  double m_prob_pion_min; 
 
   
   // Define Ntuples
@@ -105,7 +109,10 @@ private:
   int selectPionPlusPionMinus(SmartDataPtr<EvtRecTrackCol>,
 			      std::vector<int>,
 			      std::vector<int>);
-  
+
+  void calcTrackPID(EvtRecTrackIterator,
+		    double& ,
+		    double&); 
   int selectNeutralTracks(SmartDataPtr<EvtRecEvent>,
 			  SmartDataPtr<EvtRecTrackCol>);
   
@@ -160,7 +167,7 @@ Jpsi2invi::Jpsi2invi(const std::string& name, ISvcLocator* pSvcLocator) :
 
   declareProperty("PionPolarAngleMax", m_pion_polar_angle_max=0.8);
   declareProperty("PionMomentumMax", m_pion_momentum_max=0.45); 
-  
+  declareProperty("ProbPionMin", m_prob_pion_min=0.001); 
 
 }
 
@@ -486,14 +493,12 @@ int Jpsi2invi::selectChargedTracks(SmartDataPtr<EvtRecEvent> evtRecEvent,
 int Jpsi2invi::selectPionPlusPionMinus(SmartDataPtr<EvtRecTrackCol> evtRecTrkCol,
 				       std::vector<int> iPGood,
 				       std::vector<int> iMGood) {
-
   int npipi = 0;
-
+  
   for(unsigned int i1 = 0; i1 < iPGood.size(); i1++) {
     EvtRecTrackIterator itTrk_p = evtRecTrkCol->begin() + iPGood[i1];
     RecMdcTrack* mdcTrk_p = (*itTrk_p)->mdcTrack();
     if (mdcTrk_p->charge() < 0) continue; // only positive charged tracks
-
 
     for(unsigned int i2 = 0; i2 < iMGood.size(); i2++) {
       EvtRecTrackIterator itTrk_m = evtRecTrkCol->begin() + iMGood[i2];
@@ -502,20 +507,51 @@ int Jpsi2invi::selectPionPlusPionMinus(SmartDataPtr<EvtRecTrackCol> evtRecTrkCol
 
       // polar angle for both pions
       if ( ! ( fabs(cos(mdcTrk_p->theta())) < m_pion_polar_angle_max &&
-	       fabs(cos(mdcTrk_m->theta())) < m_pion_polar_angle_max )) continue;  
+      	       fabs(cos(mdcTrk_m->theta())) < m_pion_polar_angle_max )) continue;  
 
       // pion momentum
       if ( ! ( fabs(mdcTrk_p->p()) < m_pion_momentum_max  &&
-	       fabs(mdcTrk_m->p()) < m_pion_momentum_max )) continue; 
+      	       fabs(mdcTrk_m->p()) < m_pion_momentum_max )) continue; 
 
       // track PID
-      // double pion
-      // calcTrackPID() 
+      double prob_pip, prob_kp, prob_pim, prob_km; 
+      calcTrackPID(itTrk_p, prob_pip, prob_kp);  
+      calcTrackPID(itTrk_m, prob_pim, prob_km);
+      // printf(">>> %f, %f, %f, %f \n", prob_pip, prob_kp, prob_pim, prob_km);
+
+      if(! (prob_pip > prob_kp &&
+	    prob_pip > m_prob_pion_min &&
+	    prob_pim > prob_km &&
+	    prob_pim > m_prob_pion_min) ) continue;
+      
     }
   } 
   
   return npipi; 
 }
+
+void Jpsi2invi::calcTrackPID(EvtRecTrackIterator itTrk_p,
+			     double& prob_pip,
+			     double& prob_kp) {
+  prob_pip = 999.; 
+  prob_kp = 999.; 
+  ParticleID * pidp = ParticleID::instance();
+  pidp->init();
+  pidp->setMethod(pidp->methodProbability());
+  pidp->setChiMinCut(4);
+  pidp->setRecTrack(*itTrk_p);
+  // use PID sub-system
+  pidp->usePidSys(pidp->useDedx() | pidp->useTof1() | pidp->useTof2());
+  pidp->identify(pidp->onlyPionKaonProton());
+  pidp->calculate();
+  if(pidp->IsPidInfoValid()) {
+    prob_pip = pidp->probPion();
+    prob_kp  = pidp->probKaon();
+    //prob_p  = pidp->probProton();
+  }
+}
+
+
 
 
 
