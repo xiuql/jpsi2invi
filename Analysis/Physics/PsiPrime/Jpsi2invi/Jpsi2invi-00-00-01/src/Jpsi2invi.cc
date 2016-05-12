@@ -32,6 +32,9 @@
 
 #include "VertexFit/IVertexDbSvc.h"
 #include "VertexFit/Helix.h"
+#include "VertexFit/WTrackParameter.h"
+#include "VertexFit/VertexFit.h"
+
 
 #include "ParticleID/ParticleID.h"
 
@@ -51,6 +54,7 @@ public:
 
 private:
   // Declare r0, z0 cut for charged tracks
+  double m_ecms; 
   double m_vr0cut, m_vz0cut;
   double m_distin_pionlep;
   double m_cha_costheta_cut; 
@@ -66,7 +70,11 @@ private:
   double m_photon_iso_angle_min;
   double m_pion_polar_angle_max;
   double m_pion_momentum_max;
-  double m_prob_pion_min; 
+  double m_prob_pion_min;
+  double m_dipion_mass_min; 
+  double m_dipion_mass_max;
+  double m_pipi_costheta_max;
+  double m_pipisys_costheta_max; 
 
   
   // Define Ntuples
@@ -112,7 +120,10 @@ private:
 
   void calcTrackPID(EvtRecTrackIterator,
 		    double& ,
-		    double&); 
+		    double&);
+  bool hasGoodPiPiVertex(RecMdcKalTrack *,
+			 RecMdcKalTrack *);
+  
   int selectNeutralTracks(SmartDataPtr<EvtRecEvent>,
 			  SmartDataPtr<EvtRecTrackCol>);
   
@@ -141,6 +152,18 @@ LOAD_FACTORY_ENTRIES( Jpsi2invi )
 // constants
 //
 
+//mass: e,mu,pi,k,p,ks,p,pi0,etac,jpsi
+
+// const double ELECTRON_MASS = 0.000511;
+// const double MUON_MASS = 0.105658;
+const double PION_MASS = 0.139570;
+// const double KAON_MASS = 0.493677;
+// const double KSHORT_MASS = 0.497614;
+// const double PROTON_MASS = 0.938272;
+// const double PIONZERO_MASS = 0.134977;
+// const double ETAC_MASS = 2.98;
+// const double JPSI_MASS = 3.0969;
+// const double VELC = 299.792458;   // tof path unit in mm
 
   
 //
@@ -149,7 +172,8 @@ LOAD_FACTORY_ENTRIES( Jpsi2invi )
   
 Jpsi2invi::Jpsi2invi(const std::string& name, ISvcLocator* pSvcLocator) :
   Algorithm(name, pSvcLocator) {
-  //Declare the properties  
+  //Declare the properties
+  declareProperty("Ecms",m_ecms = 3.686);
   declareProperty("Vr0cut", m_vr0cut=1.0);
   declareProperty("Vz0cut", m_vz0cut=10.0);
   declareProperty("DiffPionLep", m_distin_pionlep=0.8);
@@ -167,8 +191,12 @@ Jpsi2invi::Jpsi2invi(const std::string& name, ISvcLocator* pSvcLocator) :
 
   declareProperty("PionPolarAngleMax", m_pion_polar_angle_max=0.8);
   declareProperty("PionMomentumMax", m_pion_momentum_max=0.45); 
-  declareProperty("ProbPionMin", m_prob_pion_min=0.001); 
-
+  declareProperty("ProbPionMin", m_prob_pion_min=0.001);
+  declareProperty("DipionMassMin", m_dipion_mass_min=3.0); 
+  declareProperty("DipionMassMax", m_dipion_mass_max=3.2); 
+  declareProperty("PiPiCosthetaMax", m_pipi_costheta_max=0.95);
+  declareProperty("PiPiSysCosthetaMax", m_pipisys_costheta_max=0.90);
+  
 }
 
 
@@ -523,10 +551,18 @@ int Jpsi2invi::selectPionPlusPionMinus(SmartDataPtr<EvtRecTrackCol> evtRecTrkCol
 	    prob_pip > m_prob_pion_min &&
 	    prob_pim > prob_km &&
 	    prob_pim > m_prob_pion_min) ) continue;
+
+      // apply vertex fit
+      RecMdcKalTrack *pipTrk = (*(evtRecTrkCol->begin()+iPGood[i1]))->mdcKalTrack();
+      RecMdcKalTrack *pimTrk = (*(evtRecTrkCol->begin()+iMGood[i2]))->mdcKalTrack();
+	    
+      if (! hasGoodPiPiVertex(pipTrk, pimTrk) ) continue; 
+
+      npipi++;
       
     }
   } 
-  
+
   return npipi; 
 }
 
@@ -549,6 +585,62 @@ void Jpsi2invi::calcTrackPID(EvtRecTrackIterator itTrk_p,
     prob_kp  = pidp->probKaon();
     //prob_p  = pidp->probProton();
   }
+}
+
+bool Jpsi2invi::hasGoodPiPiVertex(RecMdcKalTrack *pipTrk,
+				  RecMdcKalTrack *pimTrk) {
+
+  HepLorentzVector pcms(0.011*m_ecms, 0., 0., m_ecms);
+
+  HepLorentzVector p4_vtx_pip, p4_vtx_pim,p4_vtx_recpipi;
+  WTrackParameter wvpipTrk, wvpimTrk;
+  pipTrk->setPidType(RecMdcKalTrack::pion);
+  wvpipTrk = WTrackParameter(PION_MASS, pipTrk->getZHelix(), pipTrk->getZError());
+
+  pimTrk->setPidType(RecMdcKalTrack::pion);
+  wvpimTrk = WTrackParameter(PION_MASS, pimTrk->getZHelix(), pimTrk->getZError());
+  
+  HepPoint3D vx(0., 0., 0.);
+  HepSymMatrix Evx(3, 0);
+
+  double bx = 1E+6;
+  double by = 1E+6;
+  double bz = 1E+6;
+  Evx[0][0] = bx*bx;
+  Evx[1][1] = by*by;
+  Evx[2][2] = bz*bz;
+  
+  VertexParameter vxpar;
+  vxpar.setVx(vx);
+  vxpar.setEvx(Evx);
+  
+  VertexFit* vtxfit = VertexFit::instance();
+  vtxfit->init();
+  vtxfit->AddTrack(0,  wvpipTrk);
+  vtxfit->AddTrack(1,  wvpimTrk);
+  vtxfit->AddVertex(0, vxpar,0,1);
+
+  if(!vtxfit->Fit(0)) return false;
+
+  vtxfit->Swim(0);
+      
+  WTrackParameter wpip = vtxfit->wtrk(0);
+  WTrackParameter wpim = vtxfit->wtrk(1);
+  p4_vtx_pip = vtxfit->pfit(0) ;
+  p4_vtx_pim = vtxfit->pfit(1) ;
+  p4_vtx_recpipi = pcms - p4_vtx_pip - p4_vtx_pim;
+
+  double cospipi = cos(p4_vtx_pip.vect().angle(p4_vtx_pim.vect()));
+  double cos2pisys = (p4_vtx_pip + p4_vtx_pim).cosTheta();
+
+  if( ! ( p4_vtx_recpipi.m() >= m_dipion_mass_min &&
+	  p4_vtx_recpipi.m() <= m_dipion_mass_max) ) return false;
+
+  if( ! (cospipi < m_pipi_costheta_max) ) return false;
+
+  if( ! (fabs(cos2pisys) < m_pipisys_costheta_max ) ) return false;
+  
+  return true;
 }
 
 
