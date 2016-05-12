@@ -98,6 +98,7 @@ private:
   // vertex 
   NTuple::Item<double> m_vr0;
   NTuple::Item<double> m_vz0;
+  NTuple::Item<double> m_vtx_mrecpipi; // pipi invariant mass
 
   // check MDC and EMC match
   NTuple::Item<long> m_pion_matched;
@@ -267,6 +268,7 @@ bool Jpsi2invi::book_ntuple_signal(MsgStream log) {
       // vertex
       status = m_tuple1->addItem ("vr0", m_vr0 );
       status = m_tuple1->addItem ("vz0", m_vz0 );
+      status = m_tuple1->addItem ("vtx_mrecpipi", m_vtx_mrecpipi);
 
       // neutral tracks
       status = m_tuple1->addItem ("nshow",  m_nshow);
@@ -291,21 +293,12 @@ void Jpsi2invi::buildJpsiToInvisible() {
   SmartDataPtr<EvtRecTrackCol> evtRecTrkCol(eventSvc(), "/Event/EvtRec/EvtRecTrackCol");
   if(!evtRecTrkCol) return;
 
-  std::vector<int> iPGood; 
-  std::vector<int> iMGood; 
+  std::vector<int> iPGood, iMGood; 
   selectChargedTracks(evtRecEvent, evtRecTrkCol, iPGood, iMGood);
 
   selectPionPlusPionMinus(evtRecTrkCol, iPGood, iMGood); 
   
   selectNeutralTracks(evtRecEvent, evtRecTrkCol);
-
-  
-
-  // save pion momentum
-  // save PID(dEdx + TOF)
-  // save costhetapipi
-  // save costhetapipisys
-  // save Mpipi
 
 }
 
@@ -639,6 +632,8 @@ bool Jpsi2invi::hasGoodPiPiVertex(RecMdcKalTrack *pipTrk,
   if( ! (cospipi < m_pipi_costheta_max) ) return false;
 
   if( ! (fabs(cos2pisys) < m_pipisys_costheta_max ) ) return false;
+
+  m_vtx_mrecpipi = p4_vtx_recpipi.m();
   
   return true;
 }
