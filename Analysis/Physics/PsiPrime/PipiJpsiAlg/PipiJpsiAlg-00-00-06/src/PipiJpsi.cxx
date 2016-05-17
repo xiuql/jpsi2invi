@@ -6,7 +6,8 @@
 #include "GaudiKernel/SmartDataPtr.h"
 #include "GaudiKernel/IDataProviderSvc.h"
 #include "GaudiKernel/PropertyMgr.h"
-
+#include <iostream>
+#include <stdio.h>
 
 #include "EventModel/EventModel.h"
 #include "EventModel/EventHeader.h"
@@ -54,7 +55,7 @@ typedef HepGeom::Point3D<double> HepPoint3D;
 
 #include <vector>
 //const double twopi = 6.2831853;
-
+using namespace std;
 
 const double me  = 0.000511;
 const double mpi = 0.13957;
@@ -78,6 +79,8 @@ static long m_cout_nGood(0), m_cout_mom(0), m_cout_recoil(0), m_cout_everat(0);
 PipiJpsi::PipiJpsi(const std::string& name, ISvcLocator* pSvcLocator) :
   Algorithm(name, pSvcLocator) {
   //Declare the properties  
+  
+  declareProperty("OutputFileName",  m_OutputFileName  );
   declareProperty("Vr0cut", m_vr0cut=1.0);
   declareProperty("Vz0cut", m_vz0cut=10.0);
   declareProperty("PtCut", m_ptcut=0.0);
@@ -119,315 +122,250 @@ PipiJpsi::PipiJpsi(const std::string& name, ISvcLocator* pSvcLocator) :
   declareProperty("OnlyFour", m_only_four=false); // only save 4 tracks
   declareProperty("Premc", m_premc=false); // whether save information before selection
   declareProperty("Kaon", m_kaon_flag=false); // whether analyze K+ K- J/psi
+  
+  declareProperty("saveTopo", m_saveTopo = 1);//need to be re-evaluated when running different samples(1 for MC)
+  declareProperty("saveMCTruth", m_saveMCTruth = 0);//need to be re-evaluated when running different samples(only 1 for exclusiveMC)
+
+  declareProperty("saveTopoTree", m_saveTopoTree = 0);//need to be re-evaluated when running different samples(1 for MC)
+  declareProperty("saveNbInfo", m_saveNbInfo = 1);//need to be re-evaluated when running different samples(1 for MC)
 }
 
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
 StatusCode PipiJpsi::initialize(){
   MsgStream log(msgSvc(), name());
-
-
+	
+cout<<"This initialize for chenq!"<<endl;
   log << MSG::INFO << "in initialize()" << endmsg;
   
   StatusCode status;
   
-  SmartDataPtr<IHistogram1D> h1(histoSvc(),"hvr");
-  if( h1 ) h_vr0 = h1;
-  else h_vr0 = histoSvc()->book( "hvr" ,  "vr0", 200, -40., 40.);
+      TString s_OutputFileName(m_OutputFileName);
 
+  //Tree and File Modified
+	saveFile = new TFile(s_OutputFileName, "recreate");
+//	TreeAna = new TTree("save", "save");
+	TopoTree = new TTree("topoall","topoall");
+	NbInfo = new TTree("nbinfo","nbinfo");
+	TreeAna = new TTree("save","save");
+	//Overall info
+	      TreeAna->Branch("runid", &runid, "runid/I");
+	      TreeAna->Branch("evtid", &evtid, "evtid/I");
 
-  SmartDataPtr<IHistogram1D> h2(histoSvc(),"hvz");
-  if( h2 ) h_vz0 = h2;
-  else h_vz0 = histoSvc()->book( "hvz" ,  "vz0", 200, -40., 40.);
+	if(m_saveNbInfo== 1)
+	{
+		NbInfo->Branch("m_cout_all", &m_cout_all, "m_cout_all/L");
+		NbInfo->Branch("m_cout_col", &m_cout_col, "m_cout_col/L");
+		NbInfo->Branch("m_cout_charge", &m_cout_charge, "m_cout_charge/L");
+		NbInfo->Branch("m_cout_nGood", &m_cout_nGood, "m_cout_nGood/L");
+		NbInfo->Branch("m_cout_mom", &m_cout_mom, "m_cout_mom/L");
+		NbInfo->Branch("m_cout_recoil", &m_cout_recoil, "m_cout_recoil/L");
+		NbInfo->Branch("m_cout_everat", &m_cout_everat, "m_cout_everat/L");
+	}
+	
+	if(m_saveTopoTree == 1)
+	{
+		TopoTree->Branch("run", &m_run, "run/L");
+		//TopoTree->Branch("rec", &m_rec, "rec/L");
+		TopoTree->Branch("indexmc", &m_idxmc, "indexmc/L");
 
+		//TopoTree->Branch("trkidx", m_trkidx, "trkidx[indexmc]/I");
+		TopoTree->Branch("pdgid", m_pdgid, "pdgid[indexmc]/L");
+		//TopoTree->Branch("drank", m_drank, "drank[indexmc]/I");
+		TopoTree->Branch("motheridx", m_motheridx, "motheridx[indexmc]/I");
+		//TopoTree->Branch("motherpid", m_motherpid, "motherpid[indexmc]/I");
 
-  NTuplePtr nt7(ntupleSvc(), "FILE1/mcbef");
-  if ( nt7 ) m_tuple7 = nt7;
-  else {
-    m_tuple7 = ntupleSvc()->book ("FILE1/mcbef", CLID_ColumnWiseTuple, 
-				  "PipiJpsi mctruth before any cut");
-    if ( m_tuple7 ){
-      status = m_tuple7->addItem ("pipbef", m_pionp_bef);
-      status = m_tuple7->addItem ("pimbef", m_pionm_bef);
-      status = m_tuple7->addItem ("pipptbef", m_pionp_pt_bef);
-      status = m_tuple7->addItem ("pimptbef", m_pionm_pt_bef);
-    }
-    else { 
-      log << MSG::ERROR << "Cannot book N-tuple7:"<<long(m_tuple7)<<endmsg;
-      return StatusCode::FAILURE;
-    }
-  }
-
-
-  NTuplePtr nt2(ntupleSvc(), "FILE1/photon");
-  if ( nt2 ) m_tuple2 = nt2;
-  else {
-    m_tuple2 = ntupleSvc()->book 
-      ("FILE1/photon", CLID_ColumnWiseTuple, "ks N-Tuple example");
-    if ( m_tuple2 )    {
-      status = m_tuple2->addItem ("dthe",   m_dthe);
-      status = m_tuple2->addItem ("dphi",   m_dphi);
-      status = m_tuple2->addItem ("dang",   m_dang);
-      status = m_tuple2->addItem ("eraw",   m_eraw);
-    
-    }
-    else    { 
-      log << MSG::ERROR << "    Cannot book N-tuple:" 
-          << long(m_tuple2) << endmsg;
-      return StatusCode::FAILURE;
-    }
-  }
-
-
-
-
-  if(m_checkDedx) {
-    NTuplePtr nt3(ntupleSvc(), "FILE1/dedx");
-    if ( nt3 ) m_tuple3 = nt3;
-    else {
-      m_tuple3 = ntupleSvc()->book 
-	("FILE1/dedx", CLID_ColumnWiseTuple, "ks N-Tuple example");
-      if ( m_tuple3 )    {
-	status = m_tuple3->addItem ("ptrk",   m_ptrk);
-	status = m_tuple3->addItem ("chie",   m_chie);
-	status = m_tuple3->addItem ("chimu",   m_chimu);
-	status = m_tuple3->addItem ("chipi",   m_chipi);
-	status = m_tuple3->addItem ("chik",   m_chik);
-	status = m_tuple3->addItem ("chip",   m_chip);
-	status = m_tuple3->addItem ("probPH",   m_probPH);
-	status = m_tuple3->addItem ("normPH",   m_normPH);
-	status = m_tuple3->addItem ("ghit",   m_ghit);
-	status = m_tuple3->addItem ("thit",   m_thit);
-      }
-      else    { 
-	log << MSG::ERROR << "    Cannot book N-tuple:" 
-            << long(m_tuple3) << endmsg;
-	return StatusCode::FAILURE;
-      }
-    }
-  } // check dE/dx
-
-
-  if(m_checkTof) {
-    NTuplePtr nt4(ntupleSvc(), "FILE1/tofe");
-    if ( nt4 ) m_tuple4 = nt4;
-    else {
-      m_tuple4 = ntupleSvc()->book 
-	("FILE1/tofe",CLID_ColumnWiseTuple, "ks N-Tuple example");
-      if ( m_tuple4 )    {
-	status = m_tuple4->addItem ("ptrk",   m_ptot_etof);
-	status = m_tuple4->addItem ("cntr",   m_cntr_etof);
-	status = m_tuple4->addItem ("path",   m_path_etof);
-	status = m_tuple4->addItem ("ph",  m_ph_etof);
-	status = m_tuple4->addItem ("rhit", m_rhit_etof);
-	status = m_tuple4->addItem ("qual", m_qual_etof);
-	status = m_tuple4->addItem ("tof",   m_tof_etof);
-	status = m_tuple4->addItem ("te",   m_te_etof);
-	status = m_tuple4->addItem ("tmu",   m_tmu_etof);
-	status = m_tuple4->addItem ("tpi",   m_tpi_etof);
-	status = m_tuple4->addItem ("tk",   m_tk_etof);
-	status = m_tuple4->addItem ("tp",   m_tp_etof);
-      }
-      else    { 
-	log << MSG::ERROR << "    Cannot book N-tuple:" 
-            << long(m_tuple4) << endmsg;
-	return StatusCode::FAILURE;
-      }
-    }
-  } // check Tof:endcap
-
-
-
-
-
-
-  if(m_checkTof) {
-    NTuplePtr nt5(ntupleSvc(), "FILE1/tof1");
-    if ( nt5 ) m_tuple5 = nt5;
-    else {
-      m_tuple5 = ntupleSvc()->book 
-	("FILE1/tof1", CLID_ColumnWiseTuple, "ks N-Tuple example");
-      if ( m_tuple5 )    {
-	status = m_tuple5->addItem ("ptrk",   m_ptot_btof1);
-	status = m_tuple5->addItem ("cntr",   m_cntr_btof1);
-	status = m_tuple5->addItem ("path",   m_path_btof1);
-	status = m_tuple5->addItem ("ph",  m_ph_btof1);
-	status = m_tuple5->addItem ("zhit", m_zhit_btof1);
-	status = m_tuple5->addItem ("qual", m_qual_btof1);
-	status = m_tuple5->addItem ("tof",   m_tof_btof1);
-	status = m_tuple5->addItem ("te",   m_te_btof1);
-	status = m_tuple5->addItem ("tmu",   m_tmu_btof1);
-	status = m_tuple5->addItem ("tpi",   m_tpi_btof1);
-	status = m_tuple5->addItem ("tk",   m_tk_btof1);
-	status = m_tuple5->addItem ("tp",   m_tp_btof1);
-      }
-      else    { 
-	log << MSG::ERROR << "    Cannot book N-tuple:" 
-            << long(m_tuple5) << endmsg;
-	return StatusCode::FAILURE;
-      }
-    }
-  } // check Tof:barrel inner Tof 
-
-
-
-
-  if(m_checkTof) {
-    NTuplePtr nt6(ntupleSvc(), "FILE1/tof2");
-    if ( nt6 ) m_tuple6 = nt6;
-    else {
-      m_tuple6 = ntupleSvc()->book 
-	("FILE1/tof2", CLID_ColumnWiseTuple, "ks N-Tuple example");
-      if ( m_tuple6 )    {
-	status = m_tuple6->addItem ("ptrk",   m_ptot_btof2);
-	status = m_tuple6->addItem ("cntr",   m_cntr_btof2);
-	status = m_tuple6->addItem ("path",   m_path_btof2);
-	status = m_tuple6->addItem ("ph",  m_ph_btof2);
-	status = m_tuple6->addItem ("zhit", m_zhit_btof2);
-	status = m_tuple6->addItem ("qual", m_qual_btof2);
-	status = m_tuple6->addItem ("tof",   m_tof_btof2);
-	status = m_tuple6->addItem ("te",   m_te_btof2);
-	status = m_tuple6->addItem ("tmu",   m_tmu_btof2);
-	status = m_tuple6->addItem ("tpi",   m_tpi_btof2);
-	status = m_tuple6->addItem ("tk",   m_tk_btof2);
-	status = m_tuple6->addItem ("tp",   m_tp_btof2);
-      }
-      else    { 
-	log << MSG::ERROR << "    Cannot book N-tuple:" 
-            << long(m_tuple6) << endmsg;
-	return StatusCode::FAILURE;
-      }
-    }
-  } // check Tof:barrel outter Tof
-
-
-  NTuplePtr nt8(ntupleSvc(), "FILE1/infmom");
-  if ( nt8 ) m_tuple8 = nt8;
-  else {
-    m_tuple8 = ntupleSvc()->book ("FILE1/infmom", CLID_ColumnWiseTuple, 
-				  "information with momentum method");
-    if ( m_tuple8 )    {
-      status = m_tuple8->addItem ("momlepp", m_mom_lepp );
-      status = m_tuple8->addItem ("momlepm", m_mom_lepm );
-      status = m_tuple8->addItem ("mompionm", m_mom_pionm );
-      status = m_tuple8->addItem ("mompionp", m_mom_pionp );
-      status = m_tuple8->addItem ("pipidang", m_pipi_dang );
-      status = m_tuple8->addItem ("cmsindex", m_cms_index, 0, 3);//p;theta;phi
-      status = m_tuple8->addIndexedItem ("cmslepp", m_cms_index, m_cms_lepp );
-      status = m_tuple8->addIndexedItem ("cmslepm", m_cms_index, m_cms_lepm );
-      status = m_tuple8->addItem ("invtwopi", m_mass_twopi );
-      status = m_tuple8->addItem ("invjpsi", m_mass_jpsi );
-      status = m_tuple8->addItem ("recoil", m_mass_recoil);
-      status = m_tuple8->addItem ("invmass", m_inv_mass );
-      status = m_tuple8->addItem ("totene", m_tot_e );
-      status = m_tuple8->addItem ("totpx", m_tot_px );
-      status = m_tuple8->addItem ("totpy", m_tot_py );
-      status = m_tuple8->addItem ("totpz", m_tot_pz );
-      status = m_tuple8->addItem ("emcene", m_emc_ene );
-      status = m_tuple8->addItem ("eveflag", m_event_flag );
-      status = m_tuple8->addItem ("ptlepm", m_pt_lepm );
-      status = m_tuple8->addItem ("ptlepp", m_pt_lepp );
-      status = m_tuple8->addItem ("ptpionm", m_pt_pionm );
-      status = m_tuple8->addItem ("ptpionp", m_pt_pionp );
-      status = m_tuple8->addItem ("run", m_run );
-      status = m_tuple8->addItem ("event", m_event );
-      status = m_tuple8->addItem ("ntrack", m_index, 0, 4 );
-      status = m_tuple8->addIndexedItem ("epratio", m_index, m_ep_ratio );
-      status = m_tuple8->addIndexedItem ("costhe", m_index, m_cos_theta );
-      status = m_tuple8->addIndexedItem ("phi", m_index, m_phi );
-      status = m_tuple8->addIndexedItem ("prob_e",  m_index, m_prob_e );
-      status = m_tuple8->addIndexedItem ("prob_mu", m_index, m_prob_mu );
-      status = m_tuple8->addIndexedItem ("prob_pi", m_index, m_prob_pi );
-      status = m_tuple8->addIndexedItem ("dedx_e",  m_index, m_dedx_e );
-      status = m_tuple8->addIndexedItem ("dedx_mu", m_index, m_dedx_mu );
-      status = m_tuple8->addIndexedItem ("dedx_pi", m_index, m_dedx_pi );
-      status = m_tuple8->addIndexedItem ("dedx_ghits", m_index, m_dedx_ghits );
-      status = m_tuple8->addIndexedItem ("tof_e",  m_index, m_tof_e );
-      status = m_tuple8->addIndexedItem ("tof_mu", m_index, m_tof_mu );
-      status = m_tuple8->addIndexedItem ("tof_pi", m_index, m_tof_pi );
-      status = m_tuple8->addIndexedItem ("muc_dep", m_index, m_muc_dep );
-      status = m_tuple8->addIndexedItem ("fourmom", m_index, 4, m_four_mom);
-      status = m_tuple8->addIndexedItem ("recoilfourmom", m_index, 4, m_recoil_four_mom);
-      status = m_tuple8->addIndexedItem ("missmass", m_index, m_miss_mass);
-      status = m_tuple8->addIndexedItem ("hownear", m_index, m_how_near);
-      status = m_tuple8->addIndexedItem ("vertex", m_index, 2, m_vertex); 
-      // 1C fit of J/psi
-      status = m_tuple8->addItem ("f_chisqvt",  f_chisq_vt );
-      status = m_tuple8->addItem ("f_chisqjpsi",f_chisq_jpsi );
-      status = m_tuple8->addItem ("f_momlepp",  f_mom_lepp );
-      status = m_tuple8->addItem ("f_momlepmm", f_mom_lepm );
-      status = m_tuple8->addItem ("f_mompionm", f_mom_pionm );
-      status = m_tuple8->addItem ("f_mompionp", f_mom_pionp );
-      status = m_tuple8->addItem ("f_pipidang", f_pipi_dang );
-      status = m_tuple8->addItem ("f_cmslepp",  f_cms_lepp );
-      status = m_tuple8->addItem ("f_cmslepm",  f_cms_lepm );
-      status = m_tuple8->addItem ("f_invtwopi", f_mass_twopi );
-      status = m_tuple8->addItem ("f_invjpsi",  f_mass_jpsi );
-      status = m_tuple8->addItem ("f_recoil",   f_mass_recoil);
-      status = m_tuple8->addItem ("f_invmass",  f_inv_mass );
-      status = m_tuple8->addItem ("f_totene",   f_tot_e );
-      status = m_tuple8->addItem ("f_totpx",    f_tot_px );
-      status = m_tuple8->addItem ("f_totpy",    f_tot_py );
-      status = m_tuple8->addItem ("f_totpz",    f_tot_pz );
-      status = m_tuple8->addItem ("f_ptlepm",   f_pt_lepm );
-      status = m_tuple8->addItem ("f_ptlepp",   f_pt_lepp );
-      status = m_tuple8->addItem ("f_ptpionm",  f_pt_pionm );
-      status = m_tuple8->addItem ("f_ptpionp",  f_pt_pionp );
-      status = m_tuple8->addItem ("f_ntrack",   f_index, 0, 4 );
-      status = m_tuple8->addIndexedItem ("f_costhe", f_index, f_cos_theta );
-      status = m_tuple8->addIndexedItem ("f_phi", f_index, f_phi );
-      status = m_tuple8->addIndexedItem ("f_fourmom", f_index, 4, f_four_mom);
-      status = m_tuple8->addIndexedItem ("f_recoilfourmom", f_index, 4, f_recoil_four_mom);
-      status = m_tuple8->addIndexedItem ("f_missmass", f_index, f_miss_mass);
-      status = m_tuple8->addIndexedItem ("f_hownear", f_index, f_how_near);
-      // end of 1C fit part
-      status = m_tuple8->addItem ("nGam",   m_nGam); // num of fake photons
-      status = m_tuple8->addItem ("maxene",   m_max_gam_ene); 
-      status = m_tuple8->addItem ("maxgamcosthe",   m_max_gam_costhe); 
-      status = m_tuple8->addItem ("maxgamphi",   m_max_gam_phi); 
-      status = m_tuple8->addItem ("maxgamdang",   m_max_gam_dang); 
-      status = m_tuple8->addItem ("Npi0",   m_num_pi0); 
-      status = m_tuple8->addItem ("pi0mass",m_like_pi0_mass); 
-      status = m_tuple8->addItem ("pipipi0mass",m_pipipi0_mass); 
-      status = m_tuple8->addItem ("omegajpsimass",m_omegajpsi_mass); 
-      status = m_tuple8->addItem ("gammajpsimass",m_gammajpsi_mass); 
-      status = m_tuple8->addItem ("f_gammajpsimass",f_gammajpsi_mass); 
-      status = m_tuple8->addItem ("f_chisq_gammajpsi",f_chisq_gammajpsi); 
-      //      status = m_tuple8->addItem ("etamass",   m_like_eta_mass); 
-
-
-      status = m_tuple8->addItem ("pionmat", m_pion_matched);
-      status = m_tuple8->addItem ("lepmat", m_lep_matched);
-      status = m_tuple8->addItem("Nch", m_Nch);
-      status = m_tuple8->addItem("Nty", m_Nty);
-      //MCtruth
-      status = m_tuple8->addItem("indexmc",    m_idxmc, 0, 100);
-      status = m_tuple8->addIndexedItem("pdgid",     m_idxmc, m_pdgid);
-      status = m_tuple8->addIndexedItem("motheridx", m_idxmc, m_motheridx);
-      status = m_tuple8->addItem("xyzid", m_xyzid);
-      status = m_tuple8->addItem ("truecmsindex", m_true_cms_index, 0, 3);//p;theta;phi
-      status = m_tuple8->addIndexedItem ("truecmslepp", m_true_cms_index, m_true_cms_lepp );
-      status = m_tuple8->addIndexedItem ("truecmslepm", m_true_cms_index, m_true_cms_lepm );
-
-
-      // trigger and estime
-      status = m_tuple8->addItem ("trigindex",   m_trig_index, 0, 48);
-      status = m_tuple8->addIndexedItem("trigcond", m_trig_index, m_trig_cond);
-      status = m_tuple8->addIndexedItem("trigchan", m_trig_index, m_trig_chan);
-      status = m_tuple8->addItem ("timewindow",   m_trig_timewindow);
-      status = m_tuple8->addItem ("timetype",   m_trig_timetype);
-
-
-      status = m_tuple8->addItem ("estime",   m_est_start);
-      status = m_tuple8->addItem ("status",   m_est_status);
-      status = m_tuple8->addItem ("quality",   m_est_quality);
-    }
-    else    { 
-      log << MSG::ERROR << "    Cannot book N-tuple:" 
-          << long(m_tuple8) << endmsg;
-      return StatusCode::FAILURE;
-    }
-  }
+	}
+	
+      TreeAna->Branch("f_cos_theta", &f_cos_theta, "f_cos_theta/D");
+      TreeAna->Branch("f_how_near", &f_how_near, "f_how_near/D");
+      TreeAna->Branch("f_miss_mass", &f_miss_mass, "f_miss_mass/D");
+      TreeAna->Branch("f_phi", &f_phi, "f_phi/D");
+      TreeAna->Branch("m_cms_lepm", &m_cms_lepm, "m_cms_lepm/D");
+      TreeAna->Branch("m_cms_lepp", &m_cms_lepp, "m_cms_lepp/D");
+      TreeAna->Branch("m_cos_theta", &m_cos_theta, "m_cos_theta/D");
+      TreeAna->Branch("m_dedx_e", &m_dedx_e, "m_dedx_e/D");
+      TreeAna->Branch("m_dedx_ghits", &m_dedx_ghits, "m_dedx_ghits/D");
+      TreeAna->Branch("m_dedx_mu", &m_dedx_mu, "m_dedx_mu/D");
+      TreeAna->Branch("m_dedx_pi", &m_dedx_pi, "m_dedx_pi/D");
+      TreeAna->Branch("m_ep_ratio", &m_ep_ratio, "m_ep_ratio/D");
+      TreeAna->Branch("m_how_near", &m_how_near, "m_how_near/D");
+      TreeAna->Branch("m_miss_mass", &m_miss_mass, "m_miss_mass/D");
+      TreeAna->Branch("m_motheridx", &m_motheridx, "m_motheridx/D");
+      TreeAna->Branch("m_muc_dep", &m_muc_dep, "m_muc_dep/D");
+      TreeAna->Branch("m_pdgid", &m_pdgid, "m_pdgid/D");
+      TreeAna->Branch("m_phi", &m_phi, "m_phi/D");
+      TreeAna->Branch("m_prob_e", &m_prob_e, "m_prob_e/D");
+      TreeAna->Branch("m_prob_mu", &m_prob_mu, "m_prob_mu/D");
+      TreeAna->Branch("m_prob_pi", &m_prob_pi, "m_prob_pi/D");
+      TreeAna->Branch("m_tof_e", &m_tof_e, "m_tof_e/D");
+      TreeAna->Branch("m_tof_mu", &m_tof_mu, "m_tof_mu/D");
+      TreeAna->Branch("m_tof_pi", &m_tof_pi, "m_tof_pi/D");
+      TreeAna->Branch("m_trig_chan", &m_trig_chan, "m_trig_chan/D");
+      TreeAna->Branch("m_trig_cond", &m_trig_cond, "m_trig_cond/D");
+      TreeAna->Branch("m_true_cms_lepm", &m_true_cms_lepm, "m_true_cms_lepm/D");
+      TreeAna->Branch("m_true_cms_lepp", &m_true_cms_lepp, "m_true_cms_lepp/D");
+      TreeAna->Branch("m_dthe", &m_dthe, "m_dthe/D");
+      TreeAna->Branch("m_dphi", &m_dphi, "m_dphi/D");
+      TreeAna->Branch("m_dang", &m_dang, "m_dang/D");
+      TreeAna->Branch("m_eraw", &m_eraw, "m_eraw/D");
+      TreeAna->Branch("m_nGam", &m_nGam, "m_nGam/L");
+      TreeAna->Branch("m_ptrk", &m_ptrk, "m_ptrk/D");
+      TreeAna->Branch("m_chie", &m_chie, "m_chie/D");
+      TreeAna->Branch("m_chimu", &m_chimu, "m_chimu/D");
+      TreeAna->Branch("m_chipi", &m_chipi, "m_chipi/D");
+      TreeAna->Branch("m_chik", &m_chik, "m_chik/D");
+      TreeAna->Branch("m_chip", &m_chip, "m_chip/D");
+      TreeAna->Branch("m_probPH", &m_probPH, "m_probPH/D");
+      TreeAna->Branch("m_normPH", &m_normPH, "m_normPH/D");
+      TreeAna->Branch("m_ghit", &m_ghit, "m_ghit/D");
+      TreeAna->Branch("m_thit", &m_thit, "m_thit/D");
+      TreeAna->Branch("m_ptot_etof", &m_ptot_etof, "m_ptot_etof/D");
+      TreeAna->Branch("m_cntr_etof", &m_cntr_etof, "m_cntr_etof/D");
+      TreeAna->Branch("m_path_etof", &m_path_etof, "m_path_etof/D");
+      TreeAna->Branch("m_tof_etof", &m_tof_etof, "m_tof_etof/D");
+      TreeAna->Branch("m_te_etof", &m_te_etof, "m_te_etof/D");
+      TreeAna->Branch("m_tmu_etof", &m_tmu_etof, "m_tmu_etof/D");
+      TreeAna->Branch("m_tpi_etof", &m_tpi_etof, "m_tpi_etof/D");
+      TreeAna->Branch("m_tk_etof", &m_tk_etof, "m_tk_etof/D");
+      TreeAna->Branch("m_tp_etof", &m_tp_etof, "m_tp_etof/D");
+      TreeAna->Branch("m_ph_etof", &m_ph_etof, "m_ph_etof/D");
+      TreeAna->Branch("m_rhit_etof", &m_rhit_etof, "m_rhit_etof/D");
+      TreeAna->Branch("m_qual_etof", &m_qual_etof, "m_qual_etof/D");
+      TreeAna->Branch("m_ptot_btof1", &m_ptot_btof1, "m_ptot_btof1/D");
+      TreeAna->Branch("m_cntr_btof1", &m_cntr_btof1, "m_cntr_btof1/D");
+      TreeAna->Branch("m_path_btof1", &m_path_btof1, "m_path_btof1/D");
+      TreeAna->Branch("m_tof_btof1", &m_tof_btof1, "m_tof_btof1/D");
+      TreeAna->Branch("m_te_btof1", &m_te_btof1, "m_te_btof1/D");
+      TreeAna->Branch("m_tmu_btof1", &m_tmu_btof1, "m_tmu_btof1/D");
+      TreeAna->Branch("m_tpi_btof1", &m_tpi_btof1, "m_tpi_btof1/D");
+      TreeAna->Branch("m_tk_btof1", &m_tk_btof1, "m_tk_btof1/D");
+      TreeAna->Branch("m_tp_btof1", &m_tp_btof1, "m_tp_btof1/D");
+      TreeAna->Branch("m_ph_btof1", &m_ph_btof1, "m_ph_btof1/D");
+      TreeAna->Branch("m_zhit_btof1", &m_zhit_btof1, "m_zhit_btof1/D");
+      TreeAna->Branch("m_qual_btof1", &m_qual_btof1, "m_qual_btof1/D");
+      TreeAna->Branch("m_ptot_btof2", &m_ptot_btof2, "m_ptot_btof2/D");
+      TreeAna->Branch("m_cntr_btof2", &m_cntr_btof2, "m_cntr_btof2/D");
+      TreeAna->Branch("m_path_btof2", &m_path_btof2, "m_path_btof2/D");
+      TreeAna->Branch("m_tof_btof2", &m_tof_btof2, "m_tof_btof2/D");
+      TreeAna->Branch("m_te_btof2", &m_te_btof2, "m_te_btof2/D");
+      TreeAna->Branch("m_tmu_btof2", &m_tmu_btof2, "m_tmu_btof2/D");
+      TreeAna->Branch("m_tpi_btof2", &m_tpi_btof2, "m_tpi_btof2/D");
+      TreeAna->Branch("m_tk_btof2", &m_tk_btof2, "m_tk_btof2/D");
+      TreeAna->Branch("m_tp_btof2", &m_tp_btof2, "m_tp_btof2/D");
+      TreeAna->Branch("m_ph_btof2", &m_ph_btof2, "m_ph_btof2/D");
+      TreeAna->Branch("m_zhit_btof2", &m_zhit_btof2, "m_zhit_btof2/D");
+      TreeAna->Branch("m_qual_btof2", &m_qual_btof2, "m_qual_btof2/D");
+      TreeAna->Branch("m_pionp_bef", &m_pionp_bef, "m_pionp_bef/D");
+      TreeAna->Branch("m_pionm_bef", &m_pionm_bef, "m_pionm_bef/D");
+      TreeAna->Branch("m_pionp_pt_bef", &m_pionp_pt_bef, "m_pionp_pt_bef/D");
+      TreeAna->Branch("m_pionm_pt_bef", &m_pionm_pt_bef, "m_pionm_pt_bef/D");
+      TreeAna->Branch("m_mom_lepm", &m_mom_lepm, "m_mom_lepm/D");
+      TreeAna->Branch("m_mom_lepp", &m_mom_lepp, "m_mom_lepp/D");
+      TreeAna->Branch("m_mom_pionp", &m_mom_pionp, "m_mom_pionp/D");
+      TreeAna->Branch("m_mom_pionm", &m_mom_pionm, "m_mom_pionm/D");
+      TreeAna->Branch("m_pipi_dang", &m_pipi_dang, "m_pipi_dang/D");
+      TreeAna->Branch("m_cms_index", &m_cms_index, "m_cms_index/D");
+      //TreeAna->Branch("m_cms_lepp", &m_cms_lepp, "m_cms_lepp[indexmc]/D");
+      //TreeAna->Branch("m_cms_lepm", &m_cms_lepm, "m_cms_lepm[indexmc]/D");
+      TreeAna->Branch("m_mass_twopi", &m_mass_twopi, "m_mass_twopi/D");
+      TreeAna->Branch("m_mass_jpsi", &m_mass_jpsi, "m_mass_jpsi/D");
+      TreeAna->Branch("m_mass_recoil", &m_mass_recoil, "m_mass_recoil/D");
+      TreeAna->Branch("m_inv_mass", &m_inv_mass, "m_inv_mass/D");
+      TreeAna->Branch("m_tot_e", &m_tot_e, "m_tot_e/D");
+      TreeAna->Branch("m_tot_px", &m_tot_px, "m_tot_px/D");
+      TreeAna->Branch("m_tot_py", &m_tot_py, "m_tot_py/D");
+      TreeAna->Branch("m_tot_pz", &m_tot_pz, "m_tot_pz/D");
+      TreeAna->Branch("m_emc_ene", &m_emc_ene, "m_emc_ene/D");
+      TreeAna->Branch("m_event_flag", &m_event_flag, "m_event_flag/D");
+      TreeAna->Branch("m_pt_lepm", &m_pt_lepm, "m_pt_lepm/D");
+      TreeAna->Branch("m_pt_lepp", &m_pt_lepp, "m_pt_lepp/D");
+      TreeAna->Branch("m_pt_pionp", &m_pt_pionp, "m_pt_pionp/D");
+      TreeAna->Branch("m_pt_pionm", &m_pt_pionm, "m_pt_pionm/D");
+      TreeAna->Branch("m_run", &m_run, "m_run/D");
+      TreeAna->Branch("m_event", &m_event, "m_event/D");
+      TreeAna->Branch("m_index", &m_index, "m_index/D");
+      //TreeAna->Branch("m_cos_theta", &m_cos_theta, "m_cos_theta[indexmc]/D");
+      //TreeAna->Branch("m_ep_ratio", &m_ep_ratio, "m_ep_ratio[indexmc]/D");
+      //TreeAna->Branch("m_phi", &m_phi, "m_phi[indexmc]/D");
+      //TreeAna->Branch("m_prob_e", &m_prob_e, "m_prob_e[indexmc]/D");
+      //TreeAna->Branch("m_prob_mu", &m_prob_mu, "m_prob_mu[indexmc]/D");
+      //TreeAna->Branch("m_prob_pi", &m_prob_pi, "m_prob_pi[indexmc]/D");
+      //TreeAna->Branch("m_dedx_e", &m_dedx_e, "m_dedx_e[indexmc]/D");
+      //TreeAna->Branch("m_dedx_mu", &m_dedx_mu, "m_dedx_mu[indexmc]/D");
+      //TreeAna->Branch("m_dedx_pi", &m_dedx_pi, "m_dedx_pi[indexmc]/D");
+      //TreeAna->Branch("m_tof_e", &m_tof_e, "m_tof_e[indexmc]/D");
+      //TreeAna->Branch("m_tof_mu", &m_tof_mu, "m_tof_mu[indexmc]/D");
+      //TreeAna->Branch("m_tof_pi", &m_tof_pi, "m_tof_pi[indexmc]/D");
+      //TreeAna->Branch("m_dedx_ghits", &m_dedx_ghits, "m_dedx_ghits[indexmc]/D");
+      //TreeAna->Branch("m_muc_dep", &m_muc_dep, "m_muc_dep[indexmc]/D");
+      TreeAna->Branch("m_four_mom", &m_four_mom, "m_four_mom[4][5]/D");
+      TreeAna->Branch("m_recoil_four_mom", &m_recoil_four_mom, "m_recoil_four_mom[4][5]/D");
+      //TreeAna->Branch("m_miss_mass", &m_miss_mass, "m_miss_mass[indexmc]/D");
+      //TreeAna->Branch("m_how_near", &m_how_near, "m_how_near[indexmc]/D");
+      TreeAna->Branch("m_vertex", &m_vertex, "m_vertex[4][5]/D");
+      TreeAna->Branch("m_num_pi0", &m_num_pi0, "m_num_pi0/D");
+      TreeAna->Branch("m_like_pi0_mass", &m_like_pi0_mass, "m_like_pi0_mass/D");
+      TreeAna->Branch("m_pipipi0_mass", &m_pipipi0_mass, "m_pipipi0_mass/D");
+      TreeAna->Branch("m_omegajpsi_mass", &m_omegajpsi_mass, "m_omegajpsi_mass/D");
+      TreeAna->Branch("m_gammajpsi_mass", &m_gammajpsi_mass, "m_gammajpsi_mass/D");
+      TreeAna->Branch("f_gammajpsi_mass", &f_gammajpsi_mass, "f_gammajpsi_mass/D");
+      TreeAna->Branch("f_chisq_gammajpsi", &f_chisq_gammajpsi, "f_chisq_gammajpsi/D");
+      TreeAna->Branch("m_max_gam_ene", &m_max_gam_ene, "m_max_gam_ene/D");
+      TreeAna->Branch("m_max_gam_costhe", &m_max_gam_costhe, "m_max_gam_costhe/D");
+      TreeAna->Branch("m_max_gam_phi", &m_max_gam_phi, "m_max_gam_phi/D");
+      TreeAna->Branch("m_max_gam_cms_ene", &m_max_gam_cms_ene, "m_max_gam_cms_ene/D");
+      TreeAna->Branch("m_max_gam_dang", &m_max_gam_dang, "m_max_gam_dang/D");
+      TreeAna->Branch("m_like_eta_mass", &m_like_eta_mass, "m_like_eta_mass/D");
+      TreeAna->Branch("f_chisq_vt", &f_chisq_vt, "f_chisq_vt/D");
+      TreeAna->Branch("f_chisq_jpsi", &f_chisq_jpsi, "f_chisq_jpsi/D");
+      TreeAna->Branch("f_mom_lepm", &f_mom_lepm, "f_mom_lepm/D");
+      TreeAna->Branch("f_mom_lepp", &f_mom_lepp, "f_mom_lepp/D");
+      TreeAna->Branch("f_mom_pionp", &f_mom_pionp, "f_mom_pionp/D");
+      TreeAna->Branch("f_mom_pionm", &f_mom_pionm, "f_mom_pionm/D");
+      TreeAna->Branch("f_cms_lepp", &f_cms_lepp, "f_cms_lepp/D");
+      TreeAna->Branch("f_cms_lepm", &f_cms_lepm, "f_cms_lepm/D");
+      TreeAna->Branch("f_pipi_dang", &f_pipi_dang, "f_pipi_dang/D");
+      TreeAna->Branch("f_mass_twopi", &f_mass_twopi, "f_mass_twopi/D");
+      TreeAna->Branch("f_mass_jpsi", &f_mass_jpsi, "f_mass_jpsi/D");
+      TreeAna->Branch("f_mass_recoil", &f_mass_recoil, "f_mass_recoil/D");
+      TreeAna->Branch("f_inv_mass", &f_inv_mass, "f_inv_mass/D");
+      TreeAna->Branch("f_tot_e", &f_tot_e, "f_tot_e/D");
+      TreeAna->Branch("f_tot_px", &f_tot_px, "f_tot_px/D");
+      TreeAna->Branch("f_tot_py", &f_tot_py, "f_tot_py/D");
+      TreeAna->Branch("f_tot_pz", &f_tot_pz, "f_tot_pz/D");
+      TreeAna->Branch("f_pt_lepm", &f_pt_lepm, "f_pt_lepm/D");
+      TreeAna->Branch("f_pt_lepp", &f_pt_lepp, "f_pt_lepp/D");
+      TreeAna->Branch("f_pt_pionp", &f_pt_pionp, "f_pt_pionp/D");
+      TreeAna->Branch("f_pt_pionm", &f_pt_pionm, "f_pt_pionm/D");
+      TreeAna->Branch("f_index", &f_index, "f_index/D");
+      //TreeAna->Branch("f_cos_theta", &f_cos_theta, "f_cos_theta[indexmc]/D");
+      //TreeAna->Branch("f_phi", &f_phi, "f_phi[indexmc]/D");
+      TreeAna->Branch("f_four_mom", &f_four_mom, "f_four_mom[4][5]/D");
+      TreeAna->Branch("f_recoil_four_mom", &f_recoil_four_mom, "f_recoil_four_mom[4][5]/D");
+      //TreeAna->Branch("f_miss_mass", &f_miss_mass, "f_miss_mass[indexmc]/D");
+      //TreeAna->Branch("f_how_near", &f_how_near, "f_how_near[indexmc]/D");
+      TreeAna->Branch("m_pion_matched", &m_pion_matched, "m_pion_matched/D");
+      TreeAna->Branch("m_lep_matched", &m_lep_matched, "m_lep_matched/D");
+      TreeAna->Branch("m_Nch", &m_Nch, "m_Nch/D");
+      TreeAna->Branch("m_Nty", &m_Nty, "m_Nty/D");
+      TreeAna->Branch("m_idxmc", &m_idxmc, "m_idxmc/D");
+      //TreeAna->Branch("m_pdgid", &m_pdgid, "m_pdgid[indexmc]/D");
+      //TreeAna->Branch("m_motheridx", &m_motheridx, "m_motheridx[indexmc]/D");
+      TreeAna->Branch("m_xyzid", &m_xyzid, "m_xyzid/D");
+      TreeAna->Branch("m_true_cms_index", &m_true_cms_index, "m_true_cms_index/D");
+      //TreeAna->Branch("m_true_cms_lepp", &m_true_cms_lepp, "m_true_cms_lepp[indexmc]/D");
+      //TreeAna->Branch("m_true_cms_lepm", &m_true_cms_lepm, "m_true_cms_lepm[indexmc]/D");
+      TreeAna->Branch("m_trig_index", &m_trig_index, "trig_index/D");
+      //TreeAna->Branch("m_trig_cond", &m_trig_cond, "m_trig_cond[indexmc]/D");
+      //TreeAna->Branch("m_trig_chan", &m_trig_chan, "m_trig_chan[indexmc]/D");
+      TreeAna->Branch("m_trig_timewindow", &m_trig_timewindow, "m_trig_timewindow/D");
+      TreeAna->Branch("m_trig_timetype", &m_trig_timetype, "m_trig_timetype/D");
+      TreeAna->Branch("m_est_start", &m_est_start, "m_est_start/D");
+      TreeAna->Branch("m_est_status", &m_est_status, "m_est_status/D");
+      TreeAna->Branch("m_est_quality", &m_est_quality, "m_est_quality/D");
+  
+  
  
   //
   //--------end of book--------
@@ -437,7 +375,6 @@ StatusCode PipiJpsi::initialize(){
   log << MSG::INFO << "successfully return from initialize()" <<endmsg;
   return StatusCode::SUCCESS;
 
-
 }
 
 
@@ -445,7 +382,9 @@ StatusCode PipiJpsi::initialize(){
 StatusCode PipiJpsi::execute() {
   
   //std::cout << "execute()" << std::endl;
+cout<<"This execute  for chenq!"<<endl;
 
+	//TopoTree->Fill();
 
   MsgStream log(msgSvc(), name());
   log << MSG::INFO << "in execute()" << endreq;
@@ -499,7 +438,6 @@ StatusCode PipiJpsi::execute() {
       }
     }
   }
-  if(m_premc)  m_tuple7->write();
 
 
   SmartDataPtr<EvtRecEvent>evtRecEvent(eventSvc(),"/Event/EvtRec/EvtRecEvent");
@@ -640,8 +578,8 @@ StatusCode PipiJpsi::execute() {
 
     m_vz0 = vecipa[3];
     m_vr0 = vecipa[0];
-    h_vz0->fill(m_vz0);
-    h_vr0->fill(m_vr0);
+    //h_vz0->fill(m_vz0);
+    //h_vr0->fill(m_vr0);
 
 
     if(fabs(m_vz0) >= m_vz0cut) continue;
@@ -1274,7 +1212,6 @@ StatusCode PipiJpsi::execute() {
   log << MSG::DEBUG << "after 1C fit" << endreq;
 
 
-  m_tuple8->write();
 
 
   //
@@ -1300,7 +1237,6 @@ StatusCode PipiJpsi::execute() {
       m_normPH = dedxTrk->normPH();
 
 
-      m_tuple3->write();
     }
   }
 
@@ -1355,7 +1291,6 @@ StatusCode PipiJpsi::execute() {
           m_tp_etof    = tof - texp[4];
 
 
-          m_tuple4->write();
         }
         else {//barrel
           if( !(status->is_counter()) ) continue; // ? 
@@ -1387,8 +1322,8 @@ StatusCode PipiJpsi::execute() {
             m_tp_btof1    = tof - texp[4];
 
 
-            m_tuple5->write();
-          }
+
+			}
 
 
           if(status->layer()==2){//layer2
@@ -1419,7 +1354,6 @@ StatusCode PipiJpsi::execute() {
             m_tp_btof2    = tof - texp[4];
 
 
-	    m_tuple6->write();
           } 
         }
 
@@ -1429,6 +1363,7 @@ StatusCode PipiJpsi::execute() {
     delete status; 
   }  // check tof
  
+TreeAna->Fill();
 
 
   return sc;
@@ -1438,7 +1373,17 @@ StatusCode PipiJpsi::execute() {
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
 StatusCode PipiJpsi::finalize() {
 
+cout<<"This finalize for chenq!"<<endl;
 
+
+    NbInfo->Fill();
+	saveFile->cd();
+	TreeAna->Write();
+	if(m_saveTopoTree == 1)	TopoTree->Write();
+	if(m_saveNbInfo == 1) NbInfo->Write();
+	saveFile->Close();
+	
+	
   MsgStream log(msgSvc(), name());
   log << MSG::INFO << "in finalize()" << endmsg;
   if(m_eventrate) cout << "all event: " << m_cout_all << endl 
@@ -1450,12 +1395,13 @@ StatusCode PipiJpsi::finalize() {
        << "good charged tracks [3,4]: " << m_cout_nGood << endl 
        << "after momentum assign: " << m_cout_mom << endl 
        << "after recoild mass cut: " << m_cout_recoil << endl;
+	   cout<<"test0512"<<endl;
   return StatusCode::SUCCESS;
 }// end of finalize()
 
 
  
-void PipiJpsi::f_get_pid(EvtRecTrack *recTrk, NTuple::Array<double> m_prob_e, NTuple::Array<double> m_prob_mu, NTuple::Array<double> m_prob_pi, int n){
+void PipiJpsi::f_get_pid(EvtRecTrack *recTrk, double m_prob_e[500], double m_prob_mu[500], double m_prob_pi[500], int n){
   ParticleID *pid = ParticleID::instance();
   pid->init();
   pid->setRecTrack(recTrk);
@@ -1478,7 +1424,7 @@ void PipiJpsi::f_get_pid(EvtRecTrack *recTrk, NTuple::Array<double> m_prob_e, NT
 
 
 
-void PipiJpsi::f_get_dedx(EvtRecTrack *itTrk, NTuple::Array<double> m_dedx_e, NTuple::Array<double> m_dedx_mu, NTuple::Array<double> m_dedx_pi,  NTuple::Array<double> m_dedx_ghits, int n){
+void PipiJpsi::f_get_dedx(EvtRecTrack *itTrk, double m_dedx_e[500], double m_dedx_mu[500], double m_dedx_pi[500],  double m_dedx_ghits[500], int n){
   m_dedx_e[n] = m_dedx_mu[n] = m_dedx_pi[n] = -99.;  
   m_dedx_ghits[n] = 0;
   if((itTrk)->isMdcDedxValid()){
@@ -1493,7 +1439,7 @@ void PipiJpsi::f_get_dedx(EvtRecTrack *itTrk, NTuple::Array<double> m_dedx_e, NT
 
 
 
-void PipiJpsi::f_get_tof(EvtRecTrack *itTrk, NTuple::Array<double> m_tof_e, NTuple::Array<double> m_tof_mu, NTuple::Array<double> m_tof_pi, int n){
+void PipiJpsi::f_get_tof(EvtRecTrack *itTrk, double m_tof_e[500], double m_tof_mu[500], double m_tof_pi[500], int n){
   int m_multi = 0;
   m_tof_e[n] = m_tof_mu[n] = m_tof_pi[n] = 0.;  
   if(!(itTrk)->isTofTrackValid()) return;
