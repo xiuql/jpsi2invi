@@ -14,14 +14,13 @@
 //
 
 
-//
-// user include files
-//
+#include "AIDA/IHistogram1D.h"
 
 #include "GaudiKernel/Algorithm.h"
 #include "GaudiKernel/DeclareFactoryEntries.h"
 #include "GaudiKernel/LoadFactoryEntries.h"
 #include "GaudiKernel/NTuple.h"
+#include "GaudiKernel/IHistogramSvc.h"
 #include "GaudiKernel/Bootstrap.h"
 
 #include "EventModel/EventHeader.h"
@@ -39,6 +38,9 @@
 #include "ParticleID/ParticleID.h"
 
 
+#include <TFile.h>
+#include <TH1.h>
+
 //
 // class declaration
 //
@@ -53,7 +55,7 @@ public:
   StatusCode finalize();
 
 private:
-  // Declare r0, z0 cut for charged tracks
+  // declare r0, z0 cut for charged tracks
   double m_ecms; 
   double m_vr0cut, m_vz0cut;
   double m_distin_pionlep;
@@ -76,8 +78,15 @@ private:
   double m_pipi_costheta_max;
   double m_pipisys_costheta_max; 
 
+  // output file
+  std::string m_output_filename;
+  TFile* m_fout; 
   
-  // Define Ntuples
+  // define Histograms
+  // IHistogram1D *h_evtflw; 
+  TH1F* h_evtflw; 
+  
+  // define Ntuples
   
   // signal 
   NTuple::Tuple* m_tuple1;
@@ -155,7 +164,8 @@ const double PION_MASS = 0.139570;
   
 Jpsi2invi::Jpsi2invi(const std::string& name, ISvcLocator* pSvcLocator) :
   Algorithm(name, pSvcLocator) {
-  declareProperty("Ecms",m_ecms = 3.686);
+  declareProperty("OutputFileName", m_output_filename);
+  declareProperty("Ecms", m_ecms = 3.686);
   declareProperty("Vr0cut", m_vr0cut=1.0);
   declareProperty("Vz0cut", m_vz0cut=10.0);
   declareProperty("DiffPionLep", m_distin_pionlep=0.8);
@@ -184,6 +194,14 @@ StatusCode Jpsi2invi::initialize(){
   MsgStream log(msgSvc(), name());
   log << MSG::INFO << ">>>>>>> in initialize()" << endmsg;
 
+  m_fout = new TFile(m_output_filename.c_str(), "RECREATE");
+  m_fout->cd(); 
+
+  h_evtflw = new TH1F("hevtflw", "eventflow", 10, 0, 10);
+  // SmartDataPtr<IHistogram1D> h1(histoSvc(), "hevtflw");
+  // if( h1 ) h_evtflw = h1;
+  // else h_evtflw = histoSvc()->book( "hevtflw", "eventflow", 10, 0, 10);
+
   if (! book_ntuple_signal(log) ) return StatusCode::FAILURE;
 
   //--------end booking --------
@@ -197,6 +215,7 @@ StatusCode Jpsi2invi::execute() {
   MsgStream log(msgSvc(), name());
   log << MSG::INFO << "in execute()" << endreq;
 
+  h_evtflw->Fill(0); 
   SmartDataPtr<Event::EventHeader>eventHeader(eventSvc(),"/Event/EventHeader");
   if(!eventHeader) return StatusCode::FAILURE;
 
@@ -204,8 +223,8 @@ StatusCode Jpsi2invi::execute() {
   m_event = eventHeader->eventNumber();
 
   buildJpsiToInvisible();
-  
-  m_tuple1->write();
+  // m_tuple1->write();
+
   return StatusCode::SUCCESS; 
 
 }
@@ -214,6 +233,12 @@ StatusCode Jpsi2invi::execute() {
 StatusCode Jpsi2invi::finalize() {
   MsgStream log(msgSvc(), name());
   log << MSG::INFO << "in finalize()" << endmsg;
+
+  m_fout->cd();
+  m_tuple1->write();
+  h_evtflw->Write();
+  m_fout->Close();
+  
   return StatusCode::SUCCESS;
 }
 
