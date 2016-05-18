@@ -3,6 +3,8 @@
 #include "$MAGNETICFIELDROOT/share/MagneticField.txt"
 #include "$ABSCORROOT/share/jobOptions_AbsCor.txt"
 //#include "$PIPIJPSIALGROOT/share/anaOptions_pipijpsi.txt"
+//#include "$STDOPTS/RootHist.opts"
+
 ApplicationMgr.DLLs += {"Jpsi2invi"};
 ApplicationMgr.TopAlg += { "Jpsi2invi" };
 
@@ -16,9 +18,10 @@ EventCnvSvc.digiRootInputFile = {
 MessageSvc.OutputLevel = 5;
 
 // Number of events to be processed (default is 10)
-ApplicationMgr.EvtMax = 5;
+ApplicationMgr.EvtMax = 5000;
 
 ApplicationMgr.HistogramPersistency = "ROOT";
 NTupleSvc.Output = { "FILE1 DATAFILE='jpsi2invi.root' OPT='NEW' TYP='ROOT'"};
+Jpsi2invi.OutputFileName = "histo.root" ; 
 
 				
