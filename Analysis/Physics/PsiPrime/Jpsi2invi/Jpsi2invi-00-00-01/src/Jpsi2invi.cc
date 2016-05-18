@@ -14,13 +14,13 @@
 //
 
 
-#include "AIDA/IHistogram1D.h"
+// #include "AIDA/IHistogram1D.h"
 
 #include "GaudiKernel/Algorithm.h"
 #include "GaudiKernel/DeclareFactoryEntries.h"
 #include "GaudiKernel/LoadFactoryEntries.h"
 #include "GaudiKernel/NTuple.h"
-#include "GaudiKernel/IHistogramSvc.h"
+// #include "GaudiKernel/IHistogramSvc.h"
 #include "GaudiKernel/Bootstrap.h"
 
 #include "EventModel/EventHeader.h"
@@ -118,6 +118,7 @@ private:
   NTuple::Item<int> m_npho; 
   
   // functions
+  void book_histogram();
   bool book_ntuple_signal(MsgStream); 
   void buildJpsiToInvisible();
   int selectChargedTracks(SmartDataPtr<EvtRecEvent>,
@@ -197,10 +198,12 @@ StatusCode Jpsi2invi::initialize(){
   m_fout = new TFile(m_output_filename.c_str(), "RECREATE");
   m_fout->cd(); 
 
-  h_evtflw = new TH1F("hevtflw", "eventflow", 10, 0, 10);
+
   // SmartDataPtr<IHistogram1D> h1(histoSvc(), "hevtflw");
   // if( h1 ) h_evtflw = h1;
   // else h_evtflw = histoSvc()->book( "hevtflw", "eventflow", 10, 0, 10);
+
+  book_histogram(); 
 
   if (! book_ntuple_signal(log) ) return StatusCode::FAILURE;
 
@@ -215,7 +218,7 @@ StatusCode Jpsi2invi::execute() {
   MsgStream log(msgSvc(), name());
   log << MSG::INFO << "in execute()" << endreq;
 
-  h_evtflw->Fill(0); 
+  h_evtflw->Fill(0); // raw 
   SmartDataPtr<Event::EventHeader>eventHeader(eventSvc(),"/Event/EventHeader");
   if(!eventHeader) return StatusCode::FAILURE;
 
@@ -246,6 +249,20 @@ StatusCode Jpsi2invi::finalize() {
 Jpsi2invi::~Jpsi2invi() {
 }
 
+
+void Jpsi2invi::book_histogram() {
+
+  h_evtflw = new TH1F("hevtflw", "eventflow", 10, 0, 10);
+  h_evtflw->GetXaxis()->SetBinLabel(1,"raw");
+  h_evtflw->GetXaxis()->SetBinLabel(2,"N_{Good}=2");
+  h_evtflw->GetXaxis()->SetBinLabel(3,"N_{#gamma}=0");
+  h_evtflw->GetXaxis()->SetBinLabel(4,"|cos#theta|<0.8");
+  h_evtflw->GetXaxis()->SetBinLabel(5,"|p|<0.45");
+  h_evtflw->GetXaxis()->SetBinLabel(6,"b-veto"); 
+  h_evtflw->GetXaxis()->SetBinLabel(7,"#Delta #phi(jet,E_{T}^{miss})>0.5");
+  h_evtflw->GetXaxis()->SetBinLabel(8,"E_{T}^{miss}>80");
+  h_evtflw->GetXaxis()->SetBinLabel(9,"E_{T}^{miss}>125");
+}
 
 bool Jpsi2invi::book_ntuple_signal(MsgStream log) {
   StatusCode status;
@@ -295,9 +312,14 @@ void Jpsi2invi::buildJpsiToInvisible() {
   std::vector<int> iPGood, iMGood; 
   selectChargedTracks(evtRecEvent, evtRecTrkCol, iPGood, iMGood);
 
-  selectPionPlusPionMinus(evtRecTrkCol, iPGood, iMGood); 
+  if (m_ncharged != 2) return;
+  h_evtflw->Fill(1); // N_{Good} = 2 
   
   selectNeutralTracks(evtRecEvent, evtRecTrkCol);
+  if (m_ngam != 0) return;
+  h_evtflw->Fill(2); // N_{#gamma} = 0 
+    
+  selectPionPlusPionMinus(evtRecTrkCol, iPGood, iMGood); 
 }
 
 
@@ -387,6 +409,7 @@ int Jpsi2invi::selectPionPlusPionMinus(SmartDataPtr<EvtRecTrackCol> evtRecTrkCol
 				       std::vector<int> iPGood,
 				       std::vector<int> iMGood) {
   int npipi = 0;
+  bool evtflw_filled = false;
   
   for(unsigned int i1 = 0; i1 < iPGood.size(); i1++) {
     EvtRecTrackIterator itTrk_p = evtRecTrkCol->begin() + iPGood[i1];
@@ -400,12 +423,27 @@ int Jpsi2invi::selectPionPlusPionMinus(SmartDataPtr<EvtRecTrackCol> evtRecTrkCol
 
       // polar angle for both pions
       if ( ! ( fabs(cos(mdcTrk_p->theta())) < m_pion_polar_angle_max &&
-      	       fabs(cos(mdcTrk_m->theta())) < m_pion_polar_angle_max )) continue;  
+      	       fabs(cos(mdcTrk_m->theta())) < m_pion_polar_angle_max )) continue;
+      if ( !evtflw_filled ) {
+	h_evtflw->Fill(3); // |cos#theta|<0.8
+	//evtflw_filled = true; 
+      }
 
       // pion momentum
+      
+      // cout << "<<<< mdcTrk_p: " << fabs(mdcTrk_p->p())
+      // 	   << "< m pion_momtum max " << m_pion_momentum_max
+      // 	   << "  , " << fabs(mdcTrk_m->p()) << endl; 
+      
       if ( ! ( fabs(mdcTrk_p->p()) < m_pion_momentum_max  &&
-      	       fabs(mdcTrk_m->p()) < m_pion_momentum_max )) continue; 
+      	       fabs(mdcTrk_m->p()) < m_pion_momentum_max )) continue;
 
+      
+      if ( !evtflw_filled ) {
+	h_evtflw->Fill(4); //|p|<0.45 
+	//evtflw_filled = true; 
+      }
+      
       // track PID
       double prob_pip, prob_kp, prob_pim, prob_km; 
       calcTrackPID(itTrk_p, prob_pip, prob_kp);  
@@ -424,7 +462,7 @@ int Jpsi2invi::selectPionPlusPionMinus(SmartDataPtr<EvtRecTrackCol> evtRecTrkCol
       if (! hasGoodPiPiVertex(pipTrk, pimTrk) ) continue; 
 
       npipi++;
-      
+      evtflw_filled = true;
     }
   } 
 
