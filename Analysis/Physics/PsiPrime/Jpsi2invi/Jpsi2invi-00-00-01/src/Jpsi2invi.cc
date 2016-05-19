@@ -14,13 +14,10 @@
 //
 
 
-// #include "AIDA/IHistogram1D.h"
-
 #include "GaudiKernel/Algorithm.h"
 #include "GaudiKernel/DeclareFactoryEntries.h"
 #include "GaudiKernel/LoadFactoryEntries.h"
 #include "GaudiKernel/NTuple.h"
-// #include "GaudiKernel/IHistogramSvc.h"
 #include "GaudiKernel/Bootstrap.h"
 
 #include "EventModel/EventHeader.h"
@@ -83,7 +80,6 @@ private:
   TFile* m_fout; 
   
   // define Histograms
-  // IHistogram1D *h_evtflw; 
   TH1F* h_evtflw; 
   
   // define Ntuples
@@ -132,7 +128,8 @@ private:
 		    double& ,
 		    double&);
   bool hasGoodPiPiVertex(RecMdcKalTrack *,
-			 RecMdcKalTrack *);
+			 RecMdcKalTrack *,
+			 bool);
   int selectNeutralTracks(SmartDataPtr<EvtRecEvent>,
 			  SmartDataPtr<EvtRecTrackCol>);
   bool passVertexSelection(CLHEP::Hep3Vector,
@@ -198,11 +195,6 @@ StatusCode Jpsi2invi::initialize(){
   m_fout = new TFile(m_output_filename.c_str(), "RECREATE");
   m_fout->cd(); 
 
-
-  // SmartDataPtr<IHistogram1D> h1(histoSvc(), "hevtflw");
-  // if( h1 ) h_evtflw = h1;
-  // else h_evtflw = histoSvc()->book( "hevtflw", "eventflow", 10, 0, 10);
-
   book_histogram(); 
 
   if (! book_ntuple_signal(log) ) return StatusCode::FAILURE;
@@ -258,8 +250,8 @@ void Jpsi2invi::book_histogram() {
   h_evtflw->GetXaxis()->SetBinLabel(3,"N_{#gamma}=0");
   h_evtflw->GetXaxis()->SetBinLabel(4,"|cos#theta|<0.8");
   h_evtflw->GetXaxis()->SetBinLabel(5,"|p|<0.45");
-  h_evtflw->GetXaxis()->SetBinLabel(6,"b-veto"); 
-  h_evtflw->GetXaxis()->SetBinLabel(7,"#Delta #phi(jet,E_{T}^{miss})>0.5");
+  h_evtflw->GetXaxis()->SetBinLabel(6,"PID"); 
+  h_evtflw->GetXaxis()->SetBinLabel(7,"cos#theta_{#pi^{+}#pi^{-}}<0.95");
   h_evtflw->GetXaxis()->SetBinLabel(8,"E_{T}^{miss}>80");
   h_evtflw->GetXaxis()->SetBinLabel(9,"E_{T}^{miss}>125");
 }
@@ -424,25 +416,13 @@ int Jpsi2invi::selectPionPlusPionMinus(SmartDataPtr<EvtRecTrackCol> evtRecTrkCol
       // polar angle for both pions
       if ( ! ( fabs(cos(mdcTrk_p->theta())) < m_pion_polar_angle_max &&
       	       fabs(cos(mdcTrk_m->theta())) < m_pion_polar_angle_max )) continue;
-      if ( !evtflw_filled ) {
-	h_evtflw->Fill(3); // |cos#theta|<0.8
-	//evtflw_filled = true; 
-      }
+      if ( !evtflw_filled ) h_evtflw->Fill(3); // |cos#theta|<0.8
 
       // pion momentum
-      
-      // cout << "<<<< mdcTrk_p: " << fabs(mdcTrk_p->p())
-      // 	   << "< m pion_momtum max " << m_pion_momentum_max
-      // 	   << "  , " << fabs(mdcTrk_m->p()) << endl; 
-      
       if ( ! ( fabs(mdcTrk_p->p()) < m_pion_momentum_max  &&
       	       fabs(mdcTrk_m->p()) < m_pion_momentum_max )) continue;
 
-      
-      if ( !evtflw_filled ) {
-	h_evtflw->Fill(4); //|p|<0.45 
-	//evtflw_filled = true; 
-      }
+      if ( !evtflw_filled ) h_evtflw->Fill(4); //|p|<0.45 
       
       // track PID
       double prob_pip, prob_kp, prob_pim, prob_km; 
@@ -455,12 +435,14 @@ int Jpsi2invi::selectPionPlusPionMinus(SmartDataPtr<EvtRecTrackCol> evtRecTrkCol
 	    prob_pim > prob_km &&
 	    prob_pim > m_prob_pion_min) ) continue;
 
+      if ( !evtflw_filled ) h_evtflw->Fill(5); //PID
+ 
       // apply vertex fit
       RecMdcKalTrack *pipTrk = (*(evtRecTrkCol->begin()+iPGood[i1]))->mdcKalTrack();
       RecMdcKalTrack *pimTrk = (*(evtRecTrkCol->begin()+iMGood[i2]))->mdcKalTrack();
 	    
-      if (! hasGoodPiPiVertex(pipTrk, pimTrk) ) continue; 
-
+      if (! hasGoodPiPiVertex(pipTrk, pimTrk, evtflw_filled) ) continue; 
+      
       npipi++;
       evtflw_filled = true;
     }
@@ -491,7 +473,8 @@ void Jpsi2invi::calcTrackPID(EvtRecTrackIterator itTrk_p,
 }
 
 bool Jpsi2invi::hasGoodPiPiVertex(RecMdcKalTrack *pipTrk,
-				  RecMdcKalTrack *pimTrk) {
+				  RecMdcKalTrack *pimTrk,
+				  bool evtflw_filled) {
 
   HepLorentzVector pcms(0.011*m_ecms, 0., 0., m_ecms);
 
@@ -536,10 +519,12 @@ bool Jpsi2invi::hasGoodPiPiVertex(RecMdcKalTrack *pipTrk,
   double cospipi = cos(p4_vtx_pip.vect().angle(p4_vtx_pim.vect()));
   double cos2pisys = (p4_vtx_pip + p4_vtx_pim).cosTheta();
 
+  if( ! (cospipi < m_pipi_costheta_max) ) return false;
+  if( !evtflw_filled ) h_evtflw->Fill(6); // "cos#theta_{#pi^{+}#pi^{-}}<0.95"
+
   if( ! ( p4_vtx_recpipi.m() >= m_dipion_mass_min &&
 	  p4_vtx_recpipi.m() <= m_dipion_mass_max) ) return false;
 
-  if( ! (cospipi < m_pipi_costheta_max) ) return false;
 
   if( ! (fabs(cos2pisys) < m_pipisys_costheta_max ) ) return false;
 
