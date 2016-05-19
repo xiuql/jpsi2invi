@@ -21,7 +21,8 @@ MessageSvc.OutputLevel = 5;
 ApplicationMgr.EvtMax = 5000;
 
 ApplicationMgr.HistogramPersistency = "ROOT";
-NTupleSvc.Output = { "FILE1 DATAFILE='jpsi2invi.root' OPT='NEW' TYP='ROOT'"};
-Jpsi2invi.OutputFileName = "histo.root" ; 
+Jpsi2invi.OutputFileName="jpsi2invi.root";
+//NTupleSvc.Output = { "FILE1 DATAFILE='jpsi2invi.root' OPT='NEW' TYP='ROOT'"};
+//Jpsi2invi.OutputFileName = "histo.root" ; 
 
 				
