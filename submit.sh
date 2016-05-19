@@ -18,9 +18,9 @@ option=$1
 
 case $option in 
     0.1) echo "Running on data sample..."
-	 cd run
+	 #cd run
 	 boss.exe jobOptions_jpsi2invi.txt
-	 cd .. 
+	 #cd .. 
        ;;
 esac
 
