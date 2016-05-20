@@ -249,8 +249,8 @@ void Jpsi2invi::book_histogram() {
   h_evtflw->GetXaxis()->SetBinLabel(5,"|p|<0.45");
   h_evtflw->GetXaxis()->SetBinLabel(6,"PID"); 
   h_evtflw->GetXaxis()->SetBinLabel(7,"cos#theta_{#pi^{+}#pi^{-}}<0.95");
-  h_evtflw->GetXaxis()->SetBinLabel(8,"E_{T}^{miss}>80");
-  h_evtflw->GetXaxis()->SetBinLabel(9,"E_{T}^{miss}>125");
+  h_evtflw->GetXaxis()->SetBinLabel(8,"cos#theta_{#pi#pi sys}<0.9");
+  h_evtflw->GetXaxis()->SetBinLabel(9,"3<M_{#pi#pi}^{rec}<3.2");
 }
 
 
@@ -508,10 +508,13 @@ bool Jpsi2invi::hasGoodPiPiVertex(RecMdcKalTrack *pipTrk,
   if( ! (cospipi < m_pipi_costheta_max) ) return false;
   if( !evtflw_filled ) h_evtflw->Fill(6); // "cos#theta_{#pi^{+}#pi^{-}}<0.95"
 
+  if( ! (fabs(cos2pisys) < m_pipisys_costheta_max ) ) return false;
+  if( !evtflw_filled ) h_evtflw->Fill(7); // cos#theta_{#pi#pi sys}<0.9 
+
   if( ! ( p4_vtx_recpipi.m() >= m_dipion_mass_min &&
 	  p4_vtx_recpipi.m() <= m_dipion_mass_max) ) return false;
+  if( !evtflw_filled ) h_evtflw->Fill(8); // 3<M_{#pi#pi}^{rec}<3.2
 
-  if( ! (fabs(cos2pisys) < m_pipisys_costheta_max ) ) return false;
 
   m_vtx_mrecpipi = p4_vtx_recpipi.m();
   
