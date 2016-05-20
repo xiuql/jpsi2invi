@@ -37,6 +37,8 @@
 
 #include <TFile.h>
 #include <TH1.h>
+#include <TTree.h>
+#include <TROOT.h>
 
 //
 // class declaration
@@ -85,33 +87,33 @@ private:
   // define Ntuples
   
   // signal 
-  NTuple::Tuple* m_tuple1;
+  TTree* m_tuple1;
 
   // common info 
-  NTuple::Item<int> m_run;
-  NTuple::Item<int> m_event;
+  int m_run;
+  int m_event;
 
   // charged tracks
-  NTuple::Item<int> m_ncharged;
-  NTuple::Item<int> m_nptrk;
-  NTuple::Item<int> m_nmtrk;
+  int m_ncharged;
+  int m_nptrk;
+  int m_nmtrk;
   
   // neutral tracks
-  NTuple::Item<int> m_nshow;
-  NTuple::Item<int> m_ngam;
+  int m_nshow;
+  int m_ngam;
 
   // vertex 
-  NTuple::Item<double> m_vr0;
-  NTuple::Item<double> m_vz0;
-  NTuple::Item<double> m_vtx_mrecpipi; // pipi invariant mass
+  double m_vr0;
+  double m_vz0;
+  double m_vtx_mrecpipi; // pipi invariant mass
 
   // check MDC and EMC match
-  NTuple::Item<long> m_pion_matched;
-  NTuple::Item<long> m_lep_matched;
+  long m_pion_matched;
+  long m_lep_matched;
 
   // jpsi2invi
-  NTuple::Item<int> m_ntrk; 
-  NTuple::Item<int> m_npho; 
+  int m_ntrk; 
+  int m_npho; 
   
   // functions
   void book_histogram();
@@ -216,9 +218,13 @@ StatusCode Jpsi2invi::execute() {
 
   m_run = eventHeader->runNumber();
   m_event = eventHeader->eventNumber();
+  
 
   buildJpsiToInvisible();
   // m_tuple1->write();
+  
+  //fill the tree
+  m_tuple1->Fill();
 
   return StatusCode::SUCCESS; 
 
@@ -230,7 +236,7 @@ StatusCode Jpsi2invi::finalize() {
   log << MSG::INFO << "in finalize()" << endmsg;
 
   m_fout->cd();
-  m_tuple1->write();
+  m_tuple1->Write();
   h_evtflw->Write();
   m_fout->Close();
   
@@ -259,14 +265,16 @@ void Jpsi2invi::book_histogram() {
 bool Jpsi2invi::book_ntuple_signal(MsgStream log) {
   StatusCode status;
 
-  NTuplePtr nt1(ntupleSvc(), "FILE1/signal");
-  if ( nt1 ) m_tuple1 = nt1;
-  else {
-    m_tuple1 = ntupleSvc()->book ("FILE1/signal", CLID_ColumnWiseTuple, "signal");
+  //NTuplePtr nt1(ntupleSvc(), "FILE1/signal");
+  //if ( nt1 ) m_tuple1 = nt1;
+  //else {
+  //m_tuple1 = ntupleSvc()->book ("FILE1/signal", CLID_ColumnWiseTuple, "signal");
+  m_tuple1=new TTree("signal","FILE1/signal");
     if ( m_tuple1 ) {
 
       // common info
-      status = m_tuple1->addItem ("run",   m_run);
+      /*
+	  status = m_tuple1->addItem ("run",   m_run);
       status = m_tuple1->addItem ("event", m_event);
 
       // charged tracks  
@@ -282,13 +290,31 @@ bool Jpsi2invi::book_ntuple_signal(MsgStream log) {
       // neutral tracks
       status = m_tuple1->addItem ("nshow",  m_nshow);
       status = m_tuple1->addItem ("ngam",  m_ngam);
+	  */
+	  //commom info
+	  m_tuple1->Branch("run",&m_run,"run/I");
+	  m_tuple1->Branch("event",&m_event,"event/I");
+	  
+	  //charged tracks
+	  m_tuple1->Branch("ncharged",&m_ncharged,"ncharged/I");
+	  m_tuple1->Branch("nptrk",&m_nptrk,"nptrk/I");
+	  m_tuple1->Branch("nmtrk",&m_nmtrk,"nmtrk/I");
+	  
+	  //vertex
+	  m_tuple1->Branch("vr0",&m_vr0,"vr0/D");
+	  m_tuple1->Branch("vz0",&m_vz0,"vz0/D");
+	  m_tuple1->Branch("vtx_mrecpipi",&m_vtx_mrecpipi,"vtx_mrecpipi/D");
+	  
+	  //netual tracks
+	  m_tuple1->Branch("nshow",&m_nshow,"nshow/I");
+	  m_tuple1->Branch("ngam",&m_ngam,"ngam/I");
       
     } else { 
       log << MSG::ERROR << "    Cannot book N-tuple:" 
 	  << long(m_tuple1) << endmsg;
       return false;
     }
-  }
+  //}
   return true; 
 }
 
@@ -344,6 +370,7 @@ bool Jpsi2invi::passVertexSelection(CLHEP::Hep3Vector xorigin,
   
   if(fabs(m_vz0) >= m_vz0cut) return false;
   if(fabs(m_vr0) >= m_vr0cut) return false;
+  
   
   return true;
   
@@ -607,7 +634,7 @@ int Jpsi2invi::selectNeutralTracks(SmartDataPtr<EvtRecEvent> evtRecEvent,
   } // end loop neutral tracks     
 
   m_ngam = iGam.size();
-  m_nshow = iShow.size(); 
+  m_nshow = iShow.size();
 
   return iGam.size(); 
   
