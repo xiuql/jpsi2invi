@@ -31,14 +31,11 @@
 #include "VertexFit/WTrackParameter.h"
 #include "VertexFit/VertexFit.h"
 
-
 #include "ParticleID/ParticleID.h"
-
 
 #include <TFile.h>
 #include <TH1.h>
 #include <TTree.h>
-#include <TROOT.h>
 
 //
 // class declaration
@@ -84,10 +81,10 @@ private:
   // define Histograms
   TH1F* h_evtflw; 
   
-  // define Ntuples
+  // define Trees
   
   // signal 
-  TTree* m_tuple1;
+  TTree* m_tree;
 
   // common info 
   int m_run;
@@ -219,24 +216,18 @@ StatusCode Jpsi2invi::execute() {
   m_run = eventHeader->runNumber();
   m_event = eventHeader->eventNumber();
   
-
   buildJpsiToInvisible();
-  // m_tuple1->write();
-  
-  //fill the tree
-  m_tuple1->Fill();
+  m_tree->Fill();
 
   return StatusCode::SUCCESS; 
-
 }
-
 
 StatusCode Jpsi2invi::finalize() {
   MsgStream log(msgSvc(), name());
   log << MSG::INFO << "in finalize()" << endmsg;
 
   m_fout->cd();
-  m_tuple1->Write();
+  m_tree->Write();
   h_evtflw->Write();
   m_fout->Close();
   
@@ -262,59 +253,34 @@ void Jpsi2invi::book_histogram() {
   h_evtflw->GetXaxis()->SetBinLabel(9,"E_{T}^{miss}>125");
 }
 
+
 bool Jpsi2invi::book_ntuple_signal(MsgStream log) {
-  StatusCode status;
 
-  //NTuplePtr nt1(ntupleSvc(), "FILE1/signal");
-  //if ( nt1 ) m_tuple1 = nt1;
-  //else {
-  //m_tuple1 = ntupleSvc()->book ("FILE1/signal", CLID_ColumnWiseTuple, "signal");
-  m_tuple1=new TTree("signal","FILE1/signal");
-    if ( m_tuple1 ) {
-
-      // common info
-      /*
-	  status = m_tuple1->addItem ("run",   m_run);
-      status = m_tuple1->addItem ("event", m_event);
-
-      // charged tracks  
-      status = m_tuple1->addItem ("ncharged", m_ncharged);
-      status = m_tuple1->addItem ("nptrk", m_nptrk);
-      status = m_tuple1->addItem ("nmtrk", m_nmtrk);
-
-      // vertex
-      status = m_tuple1->addItem ("vr0", m_vr0 );
-      status = m_tuple1->addItem ("vz0", m_vz0 );
-      status = m_tuple1->addItem ("vtx_mrecpipi", m_vtx_mrecpipi);
-
-      // neutral tracks
-      status = m_tuple1->addItem ("nshow",  m_nshow);
-      status = m_tuple1->addItem ("ngam",  m_ngam);
-	  */
-	  //commom info
-	  m_tuple1->Branch("run",&m_run,"run/I");
-	  m_tuple1->Branch("event",&m_event,"event/I");
+  m_tree=new TTree("signal","FILE1/signal");
+  if ( m_tree ) {
+    //commom info
+    m_tree->Branch("run",&m_run,"run/I");
+    m_tree->Branch("event",&m_event,"event/I");
 	  
-	  //charged tracks
-	  m_tuple1->Branch("ncharged",&m_ncharged,"ncharged/I");
-	  m_tuple1->Branch("nptrk",&m_nptrk,"nptrk/I");
-	  m_tuple1->Branch("nmtrk",&m_nmtrk,"nmtrk/I");
+    //charged tracks
+    m_tree->Branch("ncharged",&m_ncharged,"ncharged/I");
+    m_tree->Branch("nptrk",&m_nptrk,"nptrk/I");
+    m_tree->Branch("nmtrk",&m_nmtrk,"nmtrk/I");
 	  
-	  //vertex
-	  m_tuple1->Branch("vr0",&m_vr0,"vr0/D");
-	  m_tuple1->Branch("vz0",&m_vz0,"vz0/D");
-	  m_tuple1->Branch("vtx_mrecpipi",&m_vtx_mrecpipi,"vtx_mrecpipi/D");
+    //vertex
+    m_tree->Branch("vr0",&m_vr0,"vr0/D");
+    m_tree->Branch("vz0",&m_vz0,"vz0/D");
+    m_tree->Branch("vtx_mrecpipi",&m_vtx_mrecpipi,"vtx_mrecpipi/D");
 	  
-	  //netual tracks
-	  m_tuple1->Branch("nshow",&m_nshow,"nshow/I");
-	  m_tuple1->Branch("ngam",&m_ngam,"ngam/I");
+    //netual tracks
+    m_tree->Branch("nshow",&m_nshow,"nshow/I");
+    m_tree->Branch("ngam",&m_ngam,"ngam/I");
       
-    } else { 
-      log << MSG::ERROR << "    Cannot book N-tuple:" 
-	  << long(m_tuple1) << endmsg;
-      return false;
-    }
-  //}
+  } else { 
+    log << MSG::ERROR << "    Cannot book Tree:" 
+	<< long(m_tree) << endmsg;
+    return false;
+  }
   return true; 
 }
 
@@ -371,9 +337,7 @@ bool Jpsi2invi::passVertexSelection(CLHEP::Hep3Vector xorigin,
   if(fabs(m_vz0) >= m_vz0cut) return false;
   if(fabs(m_vr0) >= m_vr0cut) return false;
   
-  
   return true;
-  
 }
 
 
@@ -384,12 +348,9 @@ int Jpsi2invi::selectChargedTracks(SmartDataPtr<EvtRecEvent> evtRecEvent,
 
   CLHEP::Hep3Vector xorigin = getOrigin(); 
 
-  // Good Kalman Track
   std::vector<int> iGood;
   iGood.clear();
-  // std::vector<int> iPGood;
   iPGood.clear();
-  //std::vector<int> iMGood;
   iMGood.clear();
   
   // loop through charged tracks 
@@ -413,7 +374,6 @@ int Jpsi2invi::selectChargedTracks(SmartDataPtr<EvtRecEvent> evtRecEvent,
     if(mdcTrk->charge()>0) iPGood.push_back((*itTrk)->trackId());
     if(mdcTrk->charge()<0) iMGood.push_back((*itTrk)->trackId());
 
-    
   } // end charged tracks
 
   m_ncharged = iGood.size();
@@ -421,7 +381,6 @@ int Jpsi2invi::selectChargedTracks(SmartDataPtr<EvtRecEvent> evtRecEvent,
   m_nmtrk = iMGood.size(); 
   
   return iGood.size(); 
-  
 }
 
 int Jpsi2invi::selectPionPlusPionMinus(SmartDataPtr<EvtRecTrackCol> evtRecTrkCol,
@@ -478,6 +437,7 @@ int Jpsi2invi::selectPionPlusPionMinus(SmartDataPtr<EvtRecTrackCol> evtRecTrkCol
   return npipi; 
 }
 
+
 void Jpsi2invi::calcTrackPID(EvtRecTrackIterator itTrk_p,
 			     double& prob_pip,
 			     double& prob_kp) {
@@ -495,7 +455,6 @@ void Jpsi2invi::calcTrackPID(EvtRecTrackIterator itTrk_p,
   if(pidp->IsPidInfoValid()) {
     prob_pip = pidp->probPion();
     prob_kp  = pidp->probKaon();
-    //prob_p  = pidp->probProton();
   }
 }
 
@@ -552,16 +511,12 @@ bool Jpsi2invi::hasGoodPiPiVertex(RecMdcKalTrack *pipTrk,
   if( ! ( p4_vtx_recpipi.m() >= m_dipion_mass_min &&
 	  p4_vtx_recpipi.m() <= m_dipion_mass_max) ) return false;
 
-
   if( ! (fabs(cos2pisys) < m_pipisys_costheta_max ) ) return false;
 
   m_vtx_mrecpipi = p4_vtx_recpipi.m();
   
   return true;
 }
-
-
-
 
 
 int Jpsi2invi::selectNeutralTracks(SmartDataPtr<EvtRecEvent> evtRecEvent,
@@ -637,5 +592,4 @@ int Jpsi2invi::selectNeutralTracks(SmartDataPtr<EvtRecEvent> evtRecEvent,
   m_nshow = iShow.size();
 
   return iGam.size(); 
-  
 }
