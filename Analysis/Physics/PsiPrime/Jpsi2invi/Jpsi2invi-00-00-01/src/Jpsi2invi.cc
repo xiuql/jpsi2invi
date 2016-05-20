@@ -114,7 +114,7 @@ private:
   
   // functions
   void book_histogram();
-  bool book_ntuple_signal(MsgStream); 
+  void book_tree(); 
   void buildJpsiToInvisible();
   int selectChargedTracks(SmartDataPtr<EvtRecEvent>,
 			  SmartDataPtr<EvtRecTrackCol>,
@@ -195,10 +195,7 @@ StatusCode Jpsi2invi::initialize(){
   m_fout->cd(); 
 
   book_histogram(); 
-
-  if (! book_ntuple_signal(log) ) return StatusCode::FAILURE;
-
-  //--------end booking --------
+  book_tree(); 
 
   log << MSG::INFO << "successfully return from initialize()" <<endmsg;
   return StatusCode::SUCCESS;
@@ -242,46 +239,43 @@ Jpsi2invi::~Jpsi2invi() {
 void Jpsi2invi::book_histogram() {
 
   h_evtflw = new TH1F("hevtflw", "eventflow", 10, 0, 10);
-  h_evtflw->GetXaxis()->SetBinLabel(1,"raw");
-  h_evtflw->GetXaxis()->SetBinLabel(2,"N_{Good}=2");
-  h_evtflw->GetXaxis()->SetBinLabel(3,"N_{#gamma}=0");
-  h_evtflw->GetXaxis()->SetBinLabel(4,"|cos#theta|<0.8");
-  h_evtflw->GetXaxis()->SetBinLabel(5,"|p|<0.45");
-  h_evtflw->GetXaxis()->SetBinLabel(6,"PID"); 
-  h_evtflw->GetXaxis()->SetBinLabel(7,"cos#theta_{#pi^{+}#pi^{-}}<0.95");
-  h_evtflw->GetXaxis()->SetBinLabel(8,"cos#theta_{#pi#pi sys}<0.9");
-  h_evtflw->GetXaxis()->SetBinLabel(9,"3<M_{#pi#pi}^{rec}<3.2");
+  if (!h_evtflw) return;
+  h_evtflw->GetXaxis()->SetBinLabel(1, "raw");
+  h_evtflw->GetXaxis()->SetBinLabel(2, "N_{Good}=2");
+  h_evtflw->GetXaxis()->SetBinLabel(3, "N_{#gamma}=0");
+  h_evtflw->GetXaxis()->SetBinLabel(4, "|cos#theta|<0.8");
+  h_evtflw->GetXaxis()->SetBinLabel(5, "|p|<0.45");
+  h_evtflw->GetXaxis()->SetBinLabel(6, "PID"); 
+  h_evtflw->GetXaxis()->SetBinLabel(7, "cos#theta_{#pi^{+}#pi^{-}}<0.95");
+  h_evtflw->GetXaxis()->SetBinLabel(8, "cos#theta_{#pi#pi sys}<0.9");
+  h_evtflw->GetXaxis()->SetBinLabel(9, "3<M_{#pi#pi}^{rec}<3.2");
 }
 
 
-bool Jpsi2invi::book_ntuple_signal(MsgStream log) {
+void Jpsi2invi::book_tree() {
 
-  m_tree=new TTree("signal","FILE1/signal");
-  if ( m_tree ) {
-    //commom info
-    m_tree->Branch("run",&m_run,"run/I");
-    m_tree->Branch("event",&m_event,"event/I");
+  m_tree=new TTree("signal", "signal");
+  if (!m_tree) return; 
+
+  //commom info
+  m_tree->Branch("run",&m_run,"run/I");
+  m_tree->Branch("event",&m_event,"event/I");
 	  
-    //charged tracks
-    m_tree->Branch("ncharged",&m_ncharged,"ncharged/I");
-    m_tree->Branch("nptrk",&m_nptrk,"nptrk/I");
-    m_tree->Branch("nmtrk",&m_nmtrk,"nmtrk/I");
+  //charged tracks
+  m_tree->Branch("ncharged",&m_ncharged,"ncharged/I");
+  m_tree->Branch("nptrk",&m_nptrk,"nptrk/I");
+  m_tree->Branch("nmtrk",&m_nmtrk,"nmtrk/I");
 	  
-    //vertex
-    m_tree->Branch("vr0",&m_vr0,"vr0/D");
-    m_tree->Branch("vz0",&m_vz0,"vz0/D");
-    m_tree->Branch("vtx_mrecpipi",&m_vtx_mrecpipi,"vtx_mrecpipi/D");
+  //vertex
+  m_tree->Branch("vr0",&m_vr0,"vr0/D");
+  m_tree->Branch("vz0",&m_vz0,"vz0/D");
+  m_tree->Branch("vtx_mrecpipi",&m_vtx_mrecpipi,"vtx_mrecpipi/D");
 	  
-    //netual tracks
-    m_tree->Branch("nshow",&m_nshow,"nshow/I");
-    m_tree->Branch("ngam",&m_ngam,"ngam/I");
-      
-  } else { 
-    log << MSG::ERROR << "    Cannot book Tree:" 
-	<< long(m_tree) << endmsg;
-    return false;
-  }
-  return true; 
+  //netual tracks
+  m_tree->Branch("nshow",&m_nshow,"nshow/I");
+  m_tree->Branch("ngam",&m_ngam,"ngam/I");
+
+  
 }
 
 
