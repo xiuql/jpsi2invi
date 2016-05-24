@@ -32,6 +32,8 @@
 #include "VertexFit/VertexFit.h"
 
 #include "ParticleID/ParticleID.h"
+#include "McTruth/McParticle.h"
+
 
 #include <TFile.h>
 #include <TH1.h>
@@ -76,14 +78,13 @@ private:
 
   // output file
   std::string m_output_filename;
+  bool m_isMonteCarlo; 
   TFile* m_fout; 
   
   // define Histograms
   TH1F* h_evtflw; 
   
   // define Trees
-  
-  // signal 
   TTree* m_tree;
 
   // common info 
@@ -110,12 +111,51 @@ private:
 
   // jpsi2invi
   int m_ntrk; 
-  int m_npho; 
+  int m_npho;
+
+  //  MC truth info
+  double m_mc_mom_pip;
+  double m_mc_mom_pim;
+  double m_mc_mom_mup;
+  double m_mc_mom_mum;
+  double m_mc_mom_ep;
+  double m_mc_mom_em;  
+  double m_mc_mom_p;
+  double m_mc_mom_pb;
+  double m_mc_mom_n;
+  double m_mc_mom_nb;
   
+  double m_mc_pt_pip;
+  double m_mc_pt_pim;
+  double m_mc_pt_mup ; 
+  double m_mc_pt_mum ; 
+  double m_mc_pt_ep ; 
+  double m_mc_pt_em ; 
+  double m_mc_pt_p ; 
+  double m_mc_pt_pb ; 
+  double m_mc_pt_n ; 
+  double m_mc_pt_nb ;
+  
+  double m_mc_costhe_mup ; 
+  double m_mc_costhe_mum ; 
+  double m_mc_costhe_ep ; 
+  double m_mc_costhe_em ; 
+  double m_mc_costhe_p ; 
+  double m_mc_costhe_pb ; 
+  double m_mc_costhe_n ; 
+  double m_mc_costhe_nb ;
+  double m_mc_costhe_pip ; 
+  double m_mc_costhe_pim ;
+  
+  double m_mc_cospipi ; 
+  double m_mc_cos2pisys ; 
+
+
   // functions
   void book_histogram();
   void book_tree(); 
   void buildJpsiToInvisible();
+  void saveGenInfo(); 
   int selectChargedTracks(SmartDataPtr<EvtRecEvent>,
 			  SmartDataPtr<EvtRecTrackCol>,
 			  std::vector<int> &,
@@ -154,6 +194,14 @@ LOAD_FACTORY_ENTRIES( Jpsi2invi )
 
 const double PION_MASS = 0.139570;
 
+const int ELECTRON_PDG_ID = 11;
+const int MUON_PDG_ID = 13;
+const int PIONPLUS_PDG_ID = 211;
+
+const int JPSI_PDG_ID = 443;
+const int PSI2S_PDG_ID = 100443;
+const int PROTON_PDG_ID = 2212; 
+const int NEUTRON_PDG_ID = 2112; 
 
 //
 // member functions
@@ -162,6 +210,7 @@ const double PION_MASS = 0.139570;
 Jpsi2invi::Jpsi2invi(const std::string& name, ISvcLocator* pSvcLocator) :
   Algorithm(name, pSvcLocator) {
   declareProperty("OutputFileName", m_output_filename);
+  declareProperty("IsMonteCarlo", m_isMonteCarlo);
   declareProperty("Ecms", m_ecms = 3.686);
   declareProperty("Vr0cut", m_vr0cut=1.0);
   declareProperty("Vz0cut", m_vz0cut=10.0);
@@ -254,7 +303,7 @@ void Jpsi2invi::book_histogram() {
 
 void Jpsi2invi::book_tree() {
 
-  m_tree=new TTree("signal", "signal");
+  m_tree=new TTree("tree", "jpsi2invi");
   if (!m_tree) return; 
 
   //commom info
@@ -275,12 +324,51 @@ void Jpsi2invi::book_tree() {
   m_tree->Branch("nshow",&m_nshow,"nshow/I");
   m_tree->Branch("ngam",&m_ngam,"ngam/I");
 
+  // MC truth info
+  if (!m_isMonteCarlo) return; 
+  m_tree->Branch("mc_mom_pip", &m_mc_mom_pip, "mc_mom_pip/D");
+  m_tree->Branch("mc_mom_pim", &m_mc_mom_pim, "mc_mom_pim/D");
+  m_tree->Branch("mc_mom_mup", &m_mc_mom_mup, "mc_mom_mup/D");
+  m_tree->Branch("mc_mom_mum", &m_mc_mom_mum, "mc_mom_mum/D");
+  m_tree->Branch("mc_mom_ep", &m_mc_mom_ep, "mc_mom_ep/D");
+  m_tree->Branch("mc_mom_em", &m_mc_mom_em, "mc_mom_em/D");
+  m_tree->Branch("mc_mom_p", &m_mc_mom_p, "mc_mom_p/D");
+  m_tree->Branch("mc_mom_pb", &m_mc_mom_pb, "mc_mom_pb/D");
+  m_tree->Branch("mc_mom_n", &m_mc_mom_n, "mc_mom_n/D");
+  m_tree->Branch("mc_mom_nb", &m_mc_mom_nb, "mc_mom_nb/D");
+  
+  m_tree->Branch("mc_pt_pip", &m_mc_pt_pip, "mc_pt_pip/D");
+  m_tree->Branch("mc_pt_pim", &m_mc_pt_pim, "mc_pt_pim/D");
+  m_tree->Branch("mc_pt_mup", &m_mc_pt_mup, "mc_pt_mup/D");
+  m_tree->Branch("mc_pt_mum", &m_mc_pt_mum, "mc_pt_mum/D");
+  m_tree->Branch("mc_pt_ep", &m_mc_pt_ep, "mc_pt_ep/D");
+  m_tree->Branch("mc_pt_em", &m_mc_pt_em, "mc_pt_em/D");
+  m_tree->Branch("mc_pt_p", &m_mc_pt_p, "mc_pt_p/D");
+  m_tree->Branch("mc_pt_pb", &m_mc_pt_pb, "mc_pt_pb/D");
+  m_tree->Branch("mc_pt_n", &m_mc_pt_n, "mc_pt_n/D");
+  m_tree->Branch("mc_pt_nb", &m_mc_pt_nb, "mc_pt_nb/D");
+  
+  m_tree->Branch("mc_costhe_pip", &m_mc_costhe_pip, "mc_costhe_pip/D");
+  m_tree->Branch("mc_costhe_pim", &m_mc_costhe_pim, "mc_costhe_pim/D");
+  m_tree->Branch("mc_costhe_mup", &m_mc_costhe_mup, "mc_costhe_mup/D");
+  m_tree->Branch("mc_costhe_mum", &m_mc_costhe_mum, "mc_costhe_mum/D");
+  m_tree->Branch("mc_costhe_ep", &m_mc_costhe_ep, "mc_costhe_ep/D");
+  m_tree->Branch("mc_costhe_em", &m_mc_costhe_em, "mc_costhe_em/D");
+  m_tree->Branch("mc_costhe_p", &m_mc_costhe_p, "mc_costhe_p/D");
+  m_tree->Branch("mc_costhe_pb", &m_mc_costhe_pb, "mc_costhe_pb/D");
+  m_tree->Branch("mc_costhe_n", &m_mc_costhe_n, "mc_costhe_n/D");
+  m_tree->Branch("mc_costhe_nb", &m_mc_costhe_nb, "mc_costhe_nb/D");
+    
+  m_tree->Branch("mc_cospipi", &m_mc_cospipi, "mc_cospipi/D");
+  m_tree->Branch("mc_cos2pisys", &m_mc_cos2pisys, "mc_cos2pisys/D");
   
 }
 
 
 void Jpsi2invi::buildJpsiToInvisible() {
 
+  if (m_isMonteCarlo) saveGenInfo(); 
+  
   SmartDataPtr<EvtRecEvent>evtRecEvent(eventSvc(),"/Event/EvtRec/EvtRecEvent");
   if(!evtRecEvent) return;
 
@@ -300,6 +388,88 @@ void Jpsi2invi::buildJpsiToInvisible() {
   selectPionPlusPionMinus(evtRecTrkCol, iPGood, iMGood); 
 }
 
+
+void Jpsi2invi::saveGenInfo() {
+  SmartDataPtr<Event::McParticleCol> mcParticleCol(eventSvc(), "/Event/MC/McParticleCol");
+  HepLorentzVector mc_psip,mc_pip,mc_pim,mc_ep,mc_em,mc_mup,mc_mum,mc_p,mc_pb,mc_n,mc_nb,mc_jpsi;
+
+  Event::McParticleCol::iterator iter_mc = mcParticleCol->begin();
+  for (; iter_mc != mcParticleCol->end(); iter_mc++){
+    if ((*iter_mc)->primaryParticle()) continue;
+    if (!(*iter_mc)->decayFromGenerator()) continue;
+
+    if( (*iter_mc)->mother().particleProperty() == PSI2S_PDG_ID) {
+      if ( (*iter_mc)->particleProperty() == PIONPLUS_PDG_ID)
+	mc_pip = (*iter_mc)->initialFourMomentum();
+
+      if ( (*iter_mc)->particleProperty() == -PIONPLUS_PDG_ID)
+	mc_pim = (*iter_mc)->initialFourMomentum();
+    }
+
+    if ((*iter_mc)->mother().particleProperty() == JPSI_PDG_ID ) {
+      if((*iter_mc)->particleProperty() == -MUON_PDG_ID )
+	mc_mup = (*iter_mc)->initialFourMomentum();
+
+      if((*iter_mc)->particleProperty() == MUON_PDG_ID )
+	mc_mum = (*iter_mc)->initialFourMomentum();
+      
+      if((*iter_mc)->particleProperty() == -ELECTRON_PDG_ID )
+	mc_ep = (*iter_mc)->initialFourMomentum();
+
+      if((*iter_mc)->particleProperty() == ELECTRON_PDG_ID )
+	mc_em = (*iter_mc)->initialFourMomentum();
+
+      if((*iter_mc)->particleProperty() == PROTON_PDG_ID )
+	mc_p = (*iter_mc)->initialFourMomentum();
+
+      if((*iter_mc)->particleProperty() == -PROTON_PDG_ID )
+	mc_pb = (*iter_mc)->initialFourMomentum();
+
+      if((*iter_mc)->particleProperty() == NEUTRON_PDG_ID )
+	mc_n = (*iter_mc)->initialFourMomentum();
+
+      if((*iter_mc)->particleProperty() == -NEUTRON_PDG_ID )
+	mc_nb = (*iter_mc)->initialFourMomentum();
+    }
+  } 
+
+  m_mc_mom_pip = mc_pip.vect().mag();
+  m_mc_mom_pim = mc_pim.vect().mag();
+  m_mc_mom_mup = mc_mup.vect().mag();
+  m_mc_mom_mum = mc_mum.vect().mag();
+  m_mc_mom_ep = mc_ep.vect().mag();
+  m_mc_mom_em = mc_em.vect().mag();
+  m_mc_mom_p = mc_p.vect().mag();
+  m_mc_mom_pb = mc_pb.vect().mag();
+  m_mc_mom_n = mc_n.vect().mag();
+  m_mc_mom_nb = mc_nb.vect().mag();
+
+  m_mc_pt_pip = mc_pip.vect().perp(); 
+  m_mc_pt_pim = mc_pim.vect().perp(); 
+  m_mc_pt_mup = mc_mup.vect().perp(); 
+  m_mc_pt_mum = mc_mum.vect().perp(); 
+  m_mc_pt_ep = mc_ep.vect().perp(); 
+  m_mc_pt_em = mc_em.vect().perp();
+  m_mc_pt_p = mc_p.vect().perp(); 
+  m_mc_pt_pb = mc_pb.vect().perp();
+  m_mc_pt_n = mc_n.vect().perp(); 
+  m_mc_pt_nb = mc_nb.vect().perp();
+
+  m_mc_costhe_mup = mc_mup.vect().cosTheta();
+  m_mc_costhe_mum = mc_mum.vect().cosTheta();
+  m_mc_costhe_ep = mc_ep.vect().cosTheta();
+  m_mc_costhe_em = mc_em.vect().cosTheta();
+  m_mc_costhe_p = mc_p.vect().cosTheta();
+  m_mc_costhe_pb = mc_pb.vect().cosTheta();
+  m_mc_costhe_n = mc_n.vect().cosTheta();
+  m_mc_costhe_nb = mc_nb.vect().cosTheta();
+  m_mc_costhe_pip = mc_pip.vect().cosTheta();
+  m_mc_costhe_pim = mc_pim.vect().cosTheta();
+      
+  m_mc_cospipi = mc_pip.vect().cosTheta(mc_pim.vect());
+  m_mc_cos2pisys = (mc_pip + mc_pim).vect().cosTheta();
+
+}
 
 CLHEP::Hep3Vector Jpsi2invi::getOrigin() {
   CLHEP::Hep3Vector xorigin(0,0,0);
