@@ -15,6 +15,7 @@ use ExHelloWorld        *                       BesExamples
 #use RhopiAlg              RhopiAlg-00-*                 Analysis/Physics
 #use PipiJpsiAlg           PipiJpsiAlg-*              Analysis/Physics/PsiPrime
 use Jpsi2invi             Jpsi2invi-*                Analysis/Physics/PsiPrime
+use Mumu                    Mumu-*                   Analysis/Physics/PsiPrime
 use AbsCor                AbsCor-*                   Analysis/PhotonCor
 #use Telesis               Telesis-00-*                  Analysis
 #use VertexFit             VertexFit-*                   Analysis
