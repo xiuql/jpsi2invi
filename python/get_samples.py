@@ -37,8 +37,8 @@ def main():
     
     src = args[0]
     dst = args[1]
-    print src, dst
 
+    sys.stdout.write('Scanning %s...\n' %src)
     file_list = []
     for root, dirs, files in os.walk(src):
         for f in files:
@@ -58,7 +58,7 @@ def main():
             fo.write('"%s"\n};\n' % f)
 
     fo.close()
-    
+    sys.stdout.write('Saved as: %s\n' %dst)
 
     
 if __name__ == '__main__':
