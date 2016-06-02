@@ -4,12 +4,9 @@
 # Date: [2016-06-02 Thu 13:29]  
 
 #PBS -N jdata
-##PBS -j oe
 #PBS -q "besq@torqsrv"
-##PBS -o $HOME/bes/jpsi2invi/v0.1/run/log/jpsi2invi_data-test.log 
 #PBS -o $HOME/bes/jpsi2invi/v0.1/run/log/jpsi2invi_data.log 
-#PBS -t 1-3
-
+#PBS -t 1-321%180
 
 date
 
