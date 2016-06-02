@@ -18,9 +18,9 @@ option=$1
 
 case $option in 
     0.1) echo "Running on data sample..."
-	 #cd run
-	 boss.exe jobOptions_jpsi2invi.txt
-	 #cd .. 
+	 # boss.exe jobOptions_jpsi2invi.txt
+	 # ./python/get_samples.py  /bes3fs/offline/data/664p03/psip/dst $HOME/bes/jpsi2invi/v0.1/run/samples/data_664p03_psip.txt 40G 
+	 qsub pbs/qsub_jpsi2invi_data.sh  
        ;;
 esac
 
