@@ -6,8 +6,9 @@
 #PBS -N jdata
 ##PBS -j oe
 #PBS -q "besq@torqsrv"
-#PBS -o $HOME/bes/jpsi2invi/v0.1/run/log/jpsi2invi_data-test.log 
-##PBS -t 1-10 
+##PBS -o $HOME/bes/jpsi2invi/v0.1/run/log/jpsi2invi_data-test.log 
+#PBS -o $HOME/bes/jpsi2invi/v0.1/run/log/jpsi2invi_data.log 
+#PBS -t 1-3
 
 
 date
