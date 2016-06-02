@@ -1,6 +1,6 @@
 #!/bin/bash
 # Script to submit PBS jobs 
-# Auther: SHI Xin <shixin@ihep.ac.cn>
+# Author: SHI Xin <shixin@ihep.ac.cn>
 # Date: [2016-06-02 Thu 13:29]  
 
 #PBS -N jdata
