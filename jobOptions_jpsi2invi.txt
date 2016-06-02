@@ -18,6 +18,7 @@ MessageSvc.OutputLevel = 5;
 
 // Number of events to be processed (default is 10)
 ApplicationMgr.EvtMax = 5000;
+// ApplicationMgr.EvtMax = -1;
 
 Jpsi2invi.OutputFileName="jpsi2invi.root";
 // Jpsi2invi.IsMonteCarlo="false";
