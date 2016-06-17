@@ -10,15 +10,20 @@ if [[ $# -eq 0 ]]; then
     printf "\nSYNOPSIS\n"
     printf "\n\t%-5s\n" "./build.sh [OPTION]" 
     printf "\nOPTIONS\n" 
-    printf "\n\t%-5s  %-40s\n"  "0.1"  "build Jpsi2invi " 
+    printf "\n\t%-5s  %-40s\n"  "1"  "build Jpsi2invi analyzer" 
+    printf "\n\t%-5s  %-40s\n"  "2"  "build runPlotter" 
 fi
 
 option=$1
 
 case $option in 
-    0.1) echo "Building Jpsi2invi module..."
-	 cd Analysis/Physics/PsiPrime/Jpsi2invi/Jpsi2invi-00-00-01/cmt 
-	 gmake  
+    1) echo "Building Jpsi2invi module..."
+       cd Analysis/Physics/PsiPrime/Jpsi2invi/Jpsi2invi-00-00-01/cmt 
+       gmake  
        ;;
+    2) echo "Building runPlotter..."
+       make  
+       ;;
+    
 esac
 
