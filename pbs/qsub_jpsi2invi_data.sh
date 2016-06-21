@@ -6,7 +6,8 @@
 #PBS -N jdata
 #PBS -q "besq@torqsrv"
 #PBS -o $HOME/bes/jpsi2invi/v0.1/run/log/jpsi2invi_data.log 
-#PBS -t 1-321%180
+#PBS -t 1-633%200
+
 
 date
 
