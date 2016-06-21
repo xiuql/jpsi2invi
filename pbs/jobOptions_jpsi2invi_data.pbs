@@ -2,8 +2,8 @@
 #include "$VERTEXFITROOT/share/jobOptions_VertexDbSvc.txt"
 #include "$MAGNETICFIELDROOT/share/MagneticField.txt"
 #include "$ABSCORROOT/share/jobOptions_AbsCor.txt"
-//#include "$HOME/bes/jpsi2invi/v0.1/run/samples/data_664p03_psip_40G-1.txt"
-#include "$HOME/bes/jpsi2invi/v0.1/run/samples/data_664p03_psip_40G-$PBS_ARRAYID.txt"
+//#include "$HOME/bes/jpsi2invi/v0.1/run/samples/data_664p03_psip_20G-1.txt"
+#include "$HOME/bes/jpsi2invi/v0.1/run/samples/data_664p03_psip_20G-$PBS_ARRAYID.txt"
 
 
 ApplicationMgr.DLLs += {"Jpsi2invi"};
