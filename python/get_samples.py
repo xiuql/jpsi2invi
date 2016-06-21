@@ -20,16 +20,11 @@ SYNOPSIS
 
     ./get_samples.py  input_dir output_file [size]
 
-    ./get_samples.py  /bes3fs/offline/data/664p03/psip/dst ../samples/data_664p03_psip.txt
-
-    ./get_samples.py  /bes3fs/offline/data/664p03/psip/dst ../samples/data_664p03_psip.txt 40G 
-
-
 AUTHOR 
     SHI Xin <shixin@ihep.ac.cn> 
 
 DATE
-    May 2016 
+    June 2016 
 \n''')
 
     
@@ -68,6 +63,12 @@ def main():
 
 def save_list_into_file(file_list, dst):
     nfiles = len(file_list)
+    
+    path, tail = os.path.split(dst)
+    if path != '' and not os.access(path, os.F_OK) :
+        sys.stdout.write('Creating dir %s ...\n'  % path)
+        os.makedirs(path)
+                
     fo = open(dst, 'w')
     fo.write('EventCnvSvc.digiRootInputFile = {\n')
 
@@ -83,7 +84,7 @@ def save_list_into_file(file_list, dst):
     sys.stdout.write('Saved as: %s\n' %dst)
 
     
-def group_files_by_size(name_list, size_max='40G'):
+def group_files_by_size(name_list, size_max='20G'):
     size_max = convert_size_from_str(size_max)
     groups = []
     group = []    
