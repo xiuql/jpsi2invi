@@ -18,9 +18,7 @@ NAME
 
 SYNOPSIS
 
-    ./chk_pbsjobs.py  input_dir num_files
-
-    ./chk_pbsjobs.py  $HOME/bes/jpsi2invi/v0.1/run/data 321 
+    ./chk_pbsjobs.py  input_dir num_of_files
 
 AUTHOR 
     SHI Xin <shixin@ihep.ac.cn> 
@@ -37,6 +35,8 @@ def main():
     
     src = args[0]
     num = args[1]
+    jobs_created = set(range(1, int(num)+1))
+
     sys.stdout.write('Scanning %s...\n' %src)
 
     file_list = []
@@ -49,6 +49,10 @@ def main():
     sys.stdout.write('Found %s files, with total size %s.\n' %(
         len(file_list), convert_size_to_str(total_size)))
 
+    if len(file_list) < num:
+        jobs_missing = jobs_created.difference(file_list)
+        sys.stdout.write('Missing jobs are: %s\n' % list(jobs_missing))
+        
     
 def convert_size_to_str(size):
     c_1GB = 1024*1024*1024
