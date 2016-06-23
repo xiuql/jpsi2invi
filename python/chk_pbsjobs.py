@@ -34,8 +34,8 @@ def main():
         return usage()
     
     src = args[0]
-    num = args[1]
-    jobs_created = set(range(1, int(num)+1))
+    num = int(args[1])
+    jobs_created = set(range(1, num+1))
 
     sys.stdout.write('Scanning %s...\n' %src)
 
