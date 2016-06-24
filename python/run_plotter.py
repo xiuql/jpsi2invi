@@ -18,7 +18,7 @@ NAME
 
 SYNOPSIS
 
-    ./run_plotter.py  
+    ./run_plotter.py infile outfile 
 
 AUTHOR 
     SHI Xin <shixin@ihep.ac.cn> 
@@ -30,45 +30,37 @@ DATE
     
 def main():
 
-    infile = 'run/data/jpsi2invi_data-1.root'
-    outfile = 'plotter.root'
-
-
-
+    args = sys.argv[1:]
+    if len(args) < 2:
+        return usage()
     
-    myfile = ROOT.TFile(infile)
-    fout = ROOT.TFile(outfile, "RECREATE")
-    # retrieve the ntuple of interest
-    t = myfile.Get('tree')
+    infile = args[0]
+    outfile = args[1]
+
+    fin = ROOT.TFile(infile)
+    t = fin.Get('tree')
     entries = t.GetEntriesFast()
-    print entries 
 
     h_mrecpipi = ROOT.TH1D('h_mrecpipi', 'mrecpipi', 100, 3.04, 3.16) 
     for jentry in range(entries):
         # get the next tree in the chain and verify
         ientry = t.LoadTree(jentry)
-
-        print 'jentry: %s, ientry: %s' %(jentry, ientry)
-
         if ientry < 0:
             break
-
         # copy next entry into memory and verify
         nb = t.GetEntry(jentry)
         if nb<=0:
             continue
 
-        # use the values directly from the tree
-        print t.event
-
         h_mrecpipi.Fill(t.vtx_mrecpipi)
 
-        if ientry > 10:
+        if ientry > 100:
             break
 
+    fout = ROOT.TFile(outfile, "RECREATE")
     h_mrecpipi.Write()
     fout.Close()
 
-    
+
 if __name__ == '__main__':
     main()
