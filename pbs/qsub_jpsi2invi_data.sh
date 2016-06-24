@@ -1,12 +1,13 @@
 #!/bin/bash
 # Script to submit PBS jobs 
-# Auther: SHI Xin <shixin@ihep.ac.cn>
+# Author: SHI Xin <shixin@ihep.ac.cn>
 # Date: [2016-06-02 Thu 13:29]  
 
 #PBS -N jdata
 #PBS -q "besq@torqsrv"
 #PBS -o $HOME/bes/jpsi2invi/v0.1/run/log/jpsi2invi_data.log 
-#PBS -t 1-321%180
+#PBS -t 1-633%200
+
 
 date
 
