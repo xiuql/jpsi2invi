@@ -95,6 +95,7 @@ private:
   int m_ncharged;
   int m_nptrk;
   int m_nmtrk;
+  double m_pip_p; 
   
   // neutral tracks
   int m_nshow;
@@ -154,7 +155,7 @@ private:
   // functions
   void book_histogram();
   void book_tree(); 
-  void buildJpsiToInvisible();
+  bool buildJpsiToInvisible();
   void saveGenInfo(); 
   int selectChargedTracks(SmartDataPtr<EvtRecEvent>,
 			  SmartDataPtr<EvtRecTrackCol>,
@@ -262,8 +263,9 @@ StatusCode Jpsi2invi::execute() {
   m_run = eventHeader->runNumber();
   m_event = eventHeader->eventNumber();
   
-  buildJpsiToInvisible();
-  m_tree->Fill();
+  if (buildJpsiToInvisible()) {
+    m_tree->Fill(); // only fill tree for the selected events 
+  }
 
   return StatusCode::SUCCESS; 
 }
@@ -314,6 +316,7 @@ void Jpsi2invi::book_tree() {
   m_tree->Branch("ncharged",&m_ncharged,"ncharged/I");
   m_tree->Branch("nptrk",&m_nptrk,"nptrk/I");
   m_tree->Branch("nmtrk",&m_nmtrk,"nmtrk/I");
+  m_tree->Branch("pip_p", &m_pip_p, "pip_p/D"); 
 	  
   //vertex
   m_tree->Branch("vr0",&m_vr0,"vr0/D");
@@ -365,24 +368,24 @@ void Jpsi2invi::book_tree() {
 }
 
 
-void Jpsi2invi::buildJpsiToInvisible() {
+bool Jpsi2invi::buildJpsiToInvisible() {
 
   if (m_isMonteCarlo) saveGenInfo(); 
   
   SmartDataPtr<EvtRecEvent>evtRecEvent(eventSvc(),"/Event/EvtRec/EvtRecEvent");
-  if(!evtRecEvent) return;
+  if(!evtRecEvent) return false;
 
   SmartDataPtr<EvtRecTrackCol> evtRecTrkCol(eventSvc(), "/Event/EvtRec/EvtRecTrackCol");
-  if(!evtRecTrkCol) return;
+  if(!evtRecTrkCol) return false;
 
   std::vector<int> iPGood, iMGood; 
   selectChargedTracks(evtRecEvent, evtRecTrkCol, iPGood, iMGood);
 
-  if (m_ncharged != 2) return;
+  if (m_ncharged != 2) return false;
   h_evtflw->Fill(1); // N_{Good} = 2 
   
   selectNeutralTracks(evtRecEvent, evtRecTrkCol);
-  if (m_ngam != 0) return;
+  if (m_ngam != 0) return false;
   h_evtflw->Fill(2); // N_{#gamma} = 0 
     
   selectPionPlusPionMinus(evtRecTrkCol, iPGood, iMGood); 
