@@ -114,7 +114,11 @@ private:
   // neutral tracks
   int m_nshow;
   int m_ngam;
-
+  std::vector<double> *m_raw_gpx; 
+  // std::vector<double> *m_raw_gpy; 
+  // std::vector<double> *m_raw_gpz; 
+  // std::vector<double> *m_raw_ge; 
+  
   // vertex 
   double m_vr0;
   double m_vz0;
@@ -172,7 +176,9 @@ private:
   bool buildJpsiToInvisible();
   void saveGenInfo(); 
   void saveTrkInfo(EvtRecTrackIterator,
-		   EvtRecTrackIterator); 
+		   EvtRecTrackIterator);
+  void saveGamInfo(std::vector<int>,
+		   SmartDataPtr<EvtRecTrackCol>);
   int selectChargedTracks(SmartDataPtr<EvtRecEvent>,
 			  SmartDataPtr<EvtRecTrackCol>,
 			  std::vector<int> &,
@@ -225,7 +231,10 @@ const int NEUTRON_PDG_ID = 2112;
 //
   
 Jpsi2invi::Jpsi2invi(const std::string& name, ISvcLocator* pSvcLocator) :
-  Algorithm(name, pSvcLocator) {
+  Algorithm(name, pSvcLocator),
+  m_tree(0),
+  m_raw_gpx(0)
+{
   declareProperty("OutputFileName", m_output_filename);
   declareProperty("IsMonteCarlo", m_isMonteCarlo);
   declareProperty("Ecms", m_ecms = 3.686);
@@ -271,7 +280,14 @@ StatusCode Jpsi2invi::initialize(){
 StatusCode Jpsi2invi::execute() {
   MsgStream log(msgSvc(), name());
   log << MSG::INFO << "in execute()" << endreq;
-
+  
+  // clearVariables();
+  // m_tree(0); 
+  m_raw_gpx->clear();
+  // m_raw_gpy->clear();
+  // m_raw_gpz->clear();
+  // m_raw_ge->clear();
+  
   h_evtflw->Fill(0); // raw 
   SmartDataPtr<Event::EventHeader>eventHeader(eventSvc(),"/Event/EventHeader");
   if(!eventHeader) return StatusCode::FAILURE;
@@ -329,9 +345,9 @@ void Jpsi2invi::book_tree() {
   m_tree->Branch("event",&m_event,"event/I");
 	  
   //charged tracks
-  m_tree->Branch("ncharged",&m_ncharged,"ncharged/I");
-  m_tree->Branch("nptrk",&m_nptrk,"nptrk/I");
-  m_tree->Branch("nmtrk",&m_nmtrk,"nmtrk/I");
+  m_tree->Branch("ncharged", &m_ncharged, "ncharged/I");
+  m_tree->Branch("nptrk", &m_nptrk, "nptrk/I");
+  m_tree->Branch("nmtrk", &m_nmtrk, "nmtrk/I");
   m_tree->Branch("pip_p", &m_pip_p, "pip_p/D"); 
   m_tree->Branch("pip_px", &m_pip_px, "pip_px/D"); 
   m_tree->Branch("pip_py", &m_pip_py, "pip_py/D"); 
@@ -349,14 +365,19 @@ void Jpsi2invi::book_tree() {
   m_tree->Branch("pim_eraw", &m_pim_eraw, "pim_eraw/D"); 
 	  
   //vertex
-  m_tree->Branch("vr0",&m_vr0,"vr0/D");
-  m_tree->Branch("vz0",&m_vz0,"vz0/D");
-  m_tree->Branch("vtx_mrecpipi",&m_vtx_mrecpipi,"vtx_mrecpipi/D");
+  m_tree->Branch("vr0", &m_vr0, "vr0/D");
+  m_tree->Branch("vz0", &m_vz0, "vz0/D");
+  m_tree->Branch("vtx_mrecpipi", &m_vtx_mrecpipi, "vtx_mrecpipi/D");
 	  
   //netual tracks
-  m_tree->Branch("nshow",&m_nshow,"nshow/I");
-  m_tree->Branch("ngam",&m_ngam,"ngam/I");
+  m_tree->Branch("nshow", &m_nshow, "nshow/I");
+  m_tree->Branch("ngam", &m_ngam, "ngam/I");
+  m_tree->Branch("raw_gpx", &m_raw_gpx);
+  // m_tree->Branch("raw_gpy", &m_raw_gpy);
+  // m_tree->Branch("raw_gpz", &m_raw_gpz);
+  // m_tree->Branch("raw_ge", &m_raw_ge);
 
+  
   // MC truth info
   if (!m_isMonteCarlo) return; 
   m_tree->Branch("mc_mom_pip", &m_mc_mom_pip, "mc_mom_pip/D");
@@ -413,13 +434,13 @@ bool Jpsi2invi::buildJpsiToInvisible() {
 
   if (m_ncharged != 2) return false;
   h_evtflw->Fill(1); // N_{Good} = 2 
-  
+
+  selectPionPlusPionMinus(evtRecTrkCol, iPGood, iMGood);  
+
   selectNeutralTracks(evtRecEvent, evtRecTrkCol);
-  if (m_ngam != 0) return false;
+  // if (m_ngam != 0) return false;
   h_evtflw->Fill(2); // N_{#gamma} = 0 
     
-  selectPionPlusPionMinus(evtRecTrkCol, iPGood, iMGood);
-
   return true; 
 }
 
@@ -795,6 +816,8 @@ int Jpsi2invi::selectNeutralTracks(SmartDataPtr<EvtRecEvent> evtRecEvent,
   m_ngam = iGam.size();
   m_nshow = iShow.size();
 
+  saveGamInfo(iGam, evtRecTrkCol);   
+  
   return iGam.size(); 
 }
 
@@ -829,3 +852,26 @@ void Jpsi2invi::saveTrkInfo(EvtRecTrackIterator itTrk_p,
   }
 
 }
+
+void Jpsi2invi::saveGamInfo(std::vector<int> iGam,
+			    SmartDataPtr<EvtRecTrackCol> evtRecTrkCol){
+
+  for(vector<int>::size_type i=0; i<iGam.size(); i++)  {
+    
+    EvtRecTrackIterator itTrk = evtRecTrkCol->begin() + iGam[i];
+    RecEmcShower* emcTrk = (*itTrk)->emcShower();
+    double eraw = emcTrk->energy();
+    double phi = emcTrk->phi();
+    double theta = emcTrk->theta(); 
+    HepLorentzVector p4 = HepLorentzVector(eraw * sin(theta) * cos(phi),
+					   eraw * sin(theta) * sin(phi),
+					   eraw * cos(theta),
+					   eraw );
+    // m_raw_gpx->push_back(2.8);
+    m_raw_gpx->push_back(p4.px());
+    // m_raw_gpy->push_back(p4.py());
+    // m_raw_gpz->push_back(p4.pz());
+    // m_raw_ge->push_back(p4.e());
+  }
+}
+
