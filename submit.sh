@@ -16,10 +16,12 @@ usage() {
     printf "\n\t%-5s  %-40s\n"  "0.1.3"    "Submit PBS jobs on data"
     printf "\n\t%-5s  %-40s\n"  "0.1.4"    "Check PBS jobs on data."
     printf "\n\t%-5s  %-40s\n"  "0.1.4.1"  "arXiv prod files."
-    printf "\n\t%-5s  %-40s\n"  "0.1.5"    "Merge root files."
+    printf "\n\t%-5s  %-40s\n"  "0.1.5"    "Select events."
     printf "\n\t%-5s  %-40s\n"  "0.1.6"    "run Plotter on data."
     printf "\nAUTHOR\n"
-    printf "\n\t%-5s\n" "SHI Xin <shixin@ihep.ac.cn>" 
+    printf "\n\t%-5s\n" "SHI Xin <shixin@ihep.ac.cn>"
+    printf "\nDATE\n"
+    printf "\n\t%-5s\n" "JUNE 2016"     
 }
 
 
@@ -35,7 +37,7 @@ case $option in
 	 #qsub pbs/qsub_jpsi2invi_data.sh  
 	 ;;
 
-    0.1.1) echo "Run with a few samples ..."
+    0.1.1) echo "Run with a few events ..."
 	   boss.exe jobOptions_jpsi2invi.txt
 	   ;;
     
@@ -52,24 +54,23 @@ case $option in
 	   ;;
     
     0.1.4.1) echo  "Arxiv production files to v1 ..."
-	   mkdir run/data/v1
-	   mv run/data/*.root run/data/v1
-
-	   mkdir run/log/v1
-	   mv run/log/*.log* run/log/v1
-
-	   mkdir run/samples/v1
-	   mv run/samples/*.txt run/samples/v1 
+	   mkdir run/v1
+	   mv run/data run/v1
+	   mv run/log run/v1
+	   mv run/samples run/v1 
 	   ;; 
 
-    0.1.5) echo  "Merge root files..."
+    0.1.5) echo  "Select events on data..."
+	   #./bin/runPlotter -i run/data/jpsi2invi_data-1.root -o plotter_data.root 
+	   #./python/run_plotter.py  run/data/jpsi2invi_data-1.root  run/plotter/jpsi2invi_data-1.root
+	   #qsub pbs/qsub_jpsi2invi_plotter_data.sh
+	   ./python/sel_events.py  run/data/jpsi2invi_data-1.root  run/events/jpsi2invi_data-1.root 
+	   ;; 
+    
+    0.1.6) echo  "Merge root files..."
 	   ./python/mrg_rootfiles.py  $HOME/bes/jpsi2invi/v0.1/run/data 
 	   ;; 
 
-    0.1.6) echo  "run Plotter on data..."
-	   #./bin/runPlotter -i run/data/jpsi2invi_data-1.root -o plotter_data.root 
-	   ./python/run_plotter.py 
-	   ;;
     
 esac
 

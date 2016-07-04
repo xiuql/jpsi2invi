@@ -115,9 +115,9 @@ private:
   int m_nshow;
   int m_ngam;
   std::vector<double> *m_raw_gpx; 
-  // std::vector<double> *m_raw_gpy; 
-  // std::vector<double> *m_raw_gpz; 
-  // std::vector<double> *m_raw_ge; 
+  std::vector<double> *m_raw_gpy; 
+  std::vector<double> *m_raw_gpz; 
+  std::vector<double> *m_raw_ge; 
   
   // vertex 
   double m_vr0;
@@ -233,7 +233,10 @@ const int NEUTRON_PDG_ID = 2112;
 Jpsi2invi::Jpsi2invi(const std::string& name, ISvcLocator* pSvcLocator) :
   Algorithm(name, pSvcLocator),
   m_tree(0),
-  m_raw_gpx(0)
+  m_raw_gpx(0), 
+  m_raw_gpy(0), 
+  m_raw_gpz(0), 
+  m_raw_ge(0)
 {
   declareProperty("OutputFileName", m_output_filename);
   declareProperty("IsMonteCarlo", m_isMonteCarlo);
@@ -282,11 +285,10 @@ StatusCode Jpsi2invi::execute() {
   log << MSG::INFO << "in execute()" << endreq;
   
   // clearVariables();
-  // m_tree(0); 
   m_raw_gpx->clear();
-  // m_raw_gpy->clear();
-  // m_raw_gpz->clear();
-  // m_raw_ge->clear();
+  m_raw_gpy->clear();
+  m_raw_gpz->clear();
+  m_raw_ge->clear();
   
   h_evtflw->Fill(0); // raw 
   SmartDataPtr<Event::EventHeader>eventHeader(eventSvc(),"/Event/EventHeader");
@@ -325,7 +327,7 @@ void Jpsi2invi::book_histogram() {
   if (!h_evtflw) return;
   h_evtflw->GetXaxis()->SetBinLabel(1, "raw");
   h_evtflw->GetXaxis()->SetBinLabel(2, "N_{Good}=2");
-  h_evtflw->GetXaxis()->SetBinLabel(3, "N_{#gamma}=0");
+  h_evtflw->GetXaxis()->SetBinLabel(3, "N_{#gamma}<20");
   h_evtflw->GetXaxis()->SetBinLabel(4, "|cos#theta|<0.8");
   h_evtflw->GetXaxis()->SetBinLabel(5, "|p|<0.45");
   h_evtflw->GetXaxis()->SetBinLabel(6, "PID"); 
@@ -373,9 +375,9 @@ void Jpsi2invi::book_tree() {
   m_tree->Branch("nshow", &m_nshow, "nshow/I");
   m_tree->Branch("ngam", &m_ngam, "ngam/I");
   m_tree->Branch("raw_gpx", &m_raw_gpx);
-  // m_tree->Branch("raw_gpy", &m_raw_gpy);
-  // m_tree->Branch("raw_gpz", &m_raw_gpz);
-  // m_tree->Branch("raw_ge", &m_raw_ge);
+  m_tree->Branch("raw_gpy", &m_raw_gpy);
+  m_tree->Branch("raw_gpz", &m_raw_gpz);
+  m_tree->Branch("raw_ge", &m_raw_ge);
 
   
   // MC truth info
@@ -438,8 +440,8 @@ bool Jpsi2invi::buildJpsiToInvisible() {
   selectPionPlusPionMinus(evtRecTrkCol, iPGood, iMGood);  
 
   selectNeutralTracks(evtRecEvent, evtRecTrkCol);
-  // if (m_ngam != 0) return false;
-  h_evtflw->Fill(2); // N_{#gamma} = 0 
+  if (m_ngam >= 20) return false;
+  h_evtflw->Fill(2); // N_{#gamma} < 20 
     
   return true; 
 }
@@ -867,11 +869,10 @@ void Jpsi2invi::saveGamInfo(std::vector<int> iGam,
 					   eraw * sin(theta) * sin(phi),
 					   eraw * cos(theta),
 					   eraw );
-    // m_raw_gpx->push_back(2.8);
     m_raw_gpx->push_back(p4.px());
-    // m_raw_gpy->push_back(p4.py());
-    // m_raw_gpz->push_back(p4.pz());
-    // m_raw_ge->push_back(p4.e());
+    m_raw_gpy->push_back(p4.py());
+    m_raw_gpz->push_back(p4.pz());
+    m_raw_ge->push_back(p4.e());
   }
 }
 
