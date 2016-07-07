@@ -56,7 +56,7 @@ private:
   // declare r0, z0 cut for charged tracks
   double m_ecms; 
   double m_vr0cut, m_vz0cut;
-  double m_distin_pionlep;
+  // double m_distin_pionlep;
   double m_cha_costheta_cut; 
   double m_total_number_of_charged_max; 
   double m_min_emctime;
@@ -124,6 +124,14 @@ private:
   double m_vz0;
   double m_vtx_mrecpipi; // pipi invariant mass
 
+  // PID info
+  double m_prob_pip;
+  double m_prob_pim;
+  double m_prob_kp;
+  double m_prob_km;
+  double m_prob_p; 
+  double m_prob_pb; 
+  
   // check MDC and EMC match
   long m_pion_matched;
   long m_lep_matched;
@@ -187,7 +195,8 @@ private:
 			      std::vector<int>,
 			      std::vector<int>);
   void calcTrackPID(EvtRecTrackIterator,
-		    double& ,
+		    double&,
+		    double&,
 		    double&);
   bool hasGoodPiPiVertex(RecMdcKalTrack *,
 			 RecMdcKalTrack *,
@@ -243,7 +252,7 @@ Jpsi2invi::Jpsi2invi(const std::string& name, ISvcLocator* pSvcLocator) :
   declareProperty("Ecms", m_ecms = 3.686);
   declareProperty("Vr0cut", m_vr0cut=1.0);
   declareProperty("Vz0cut", m_vz0cut=10.0);
-  declareProperty("DiffPionLep", m_distin_pionlep=0.8);
+  // declareProperty("DiffPionLep", m_distin_pionlep=0.8);
   declareProperty("ChaCosthetaCut", m_cha_costheta_cut=0.93);
   declareProperty("TotalNumberOfChargedMax", m_total_number_of_charged_max=50);
   declareProperty("MinEstCut", m_min_emctime=0.0);
@@ -255,8 +264,8 @@ Jpsi2invi::Jpsi2invi(const std::string& name, ISvcLocator* pSvcLocator) :
   declareProperty("EnergyBarrelMin", m_energy_barrel_min=0.025); 
   declareProperty("EnergyEndcapMin", m_energy_endcap_min=0.050); 
   declareProperty("PhotonIsoAngleMin", m_photon_iso_angle_min=10);
-  declareProperty("PionPolarAngleMax", m_pion_polar_angle_max=0.8);
-  declareProperty("PionMomentumMax", m_pion_momentum_max=0.45); 
+  declareProperty("PionPolarAngleMax", m_pion_polar_angle_max=0.99);
+  declareProperty("PionMomentumMax", m_pion_momentum_max=0.8); 
   declareProperty("ProbPionMin", m_prob_pion_min=0.001);
   declareProperty("DipionMassMin", m_dipion_mass_min=3.0); 
   declareProperty("DipionMassMax", m_dipion_mass_max=3.2); 
@@ -284,7 +293,7 @@ StatusCode Jpsi2invi::execute() {
   MsgStream log(msgSvc(), name());
   log << MSG::INFO << "in execute()" << endreq;
   
-  // clearVariables();
+  // clear vectors 
   m_raw_gpx->clear();
   m_raw_gpy->clear();
   m_raw_gpz->clear();
@@ -328,8 +337,8 @@ void Jpsi2invi::book_histogram() {
   h_evtflw->GetXaxis()->SetBinLabel(1, "raw");
   h_evtflw->GetXaxis()->SetBinLabel(2, "N_{Good}=2");
   h_evtflw->GetXaxis()->SetBinLabel(3, "N_{#gamma}<20");
-  h_evtflw->GetXaxis()->SetBinLabel(4, "|cos#theta|<0.8");
-  h_evtflw->GetXaxis()->SetBinLabel(5, "|p|<0.45");
+  h_evtflw->GetXaxis()->SetBinLabel(4, "|cos#theta|<0.99");
+  h_evtflw->GetXaxis()->SetBinLabel(5, "|p|<0.8");
   h_evtflw->GetXaxis()->SetBinLabel(6, "PID"); 
   h_evtflw->GetXaxis()->SetBinLabel(7, "cos#theta_{#pi^{+}#pi^{-}}<0.95");
   h_evtflw->GetXaxis()->SetBinLabel(8, "cos#theta_{#pi#pi sys}<0.9");
@@ -378,6 +387,14 @@ void Jpsi2invi::book_tree() {
   m_tree->Branch("raw_gpy", &m_raw_gpy);
   m_tree->Branch("raw_gpz", &m_raw_gpz);
   m_tree->Branch("raw_ge", &m_raw_ge);
+
+  // PID info
+  m_tree->Branch("prob_pip", &m_prob_pip, "prob_pip/D"); 
+  m_tree->Branch("prob_pim", &m_prob_pim, "prob_pim/D"); 
+  m_tree->Branch("prob_kp", &m_prob_kp, "prob_kp/D"); 
+  m_tree->Branch("prob_km", &m_prob_km, "prob_km/D"); 
+  m_tree->Branch("prob_p", &m_prob_p, "prob_p/D"); 
+  m_tree->Branch("prob_pb", &m_prob_pb, "prob_pb/D"); 
 
   
   // MC truth info
@@ -624,24 +641,31 @@ int Jpsi2invi::selectPionPlusPionMinus(SmartDataPtr<EvtRecTrackCol> evtRecTrkCol
       // polar angle for both pions
       if ( ! ( fabs(cos(mdcTrk_p->theta())) < m_pion_polar_angle_max &&
       	       fabs(cos(mdcTrk_m->theta())) < m_pion_polar_angle_max )) continue;
-      if ( !evtflw_filled ) h_evtflw->Fill(3); // |cos#theta|<0.8
+      if ( !evtflw_filled ) h_evtflw->Fill(3); // |cos#theta|<0.99
 
       // pion momentum
       if ( ! ( fabs(mdcTrk_p->p()) < m_pion_momentum_max  &&
       	       fabs(mdcTrk_m->p()) < m_pion_momentum_max )) continue;
 
-      if ( !evtflw_filled ) h_evtflw->Fill(4); //|p|<0.45 
+      if ( !evtflw_filled ) h_evtflw->Fill(4); //|p|<0.8  
       
       // track PID
-      double prob_pip, prob_kp, prob_pim, prob_km; 
-      calcTrackPID(itTrk_p, prob_pip, prob_kp);  
-      calcTrackPID(itTrk_m, prob_pim, prob_km);
+      double prob_pip, prob_kp, prob_pim, prob_km, prob_p, prob_pb; 
+      calcTrackPID(itTrk_p, prob_pip, prob_kp, prob_p);  
+      calcTrackPID(itTrk_m, prob_pim, prob_km, prob_pb);
       // printf(">>> %f, %f, %f, %f \n", prob_pip, prob_kp, prob_pim, prob_km);
 
-      if(! (prob_pip > prob_kp &&
-	    prob_pip > m_prob_pion_min &&
-	    prob_pim > prob_km &&
-	    prob_pim > m_prob_pion_min) ) continue;
+      m_prob_pip = prob_pip;
+      m_prob_kp = prob_kp;
+      m_prob_p = prob_p;
+      m_prob_pim = prob_pim;
+      m_prob_km = prob_km;
+      m_prob_pb = prob_pb;
+      
+      // if(! (prob_pip > prob_kp &&
+      // 	    prob_pip > m_prob_pion_min &&
+      // 	    prob_pim > prob_km &&
+      // 	    prob_pim > m_prob_pion_min) ) continue;
 
       if ( !evtflw_filled ) h_evtflw->Fill(5); //PID
  
@@ -664,9 +688,11 @@ int Jpsi2invi::selectPionPlusPionMinus(SmartDataPtr<EvtRecTrackCol> evtRecTrkCol
 
 void Jpsi2invi::calcTrackPID(EvtRecTrackIterator itTrk_p,
 			     double& prob_pip,
-			     double& prob_kp) {
+			     double& prob_kp,
+			     double& prob_p) {
   prob_pip = 999.; 
   prob_kp = 999.; 
+  prob_p = 999.; 
   ParticleID * pidp = ParticleID::instance();
   pidp->init();
   pidp->setMethod(pidp->methodProbability());
@@ -679,6 +705,7 @@ void Jpsi2invi::calcTrackPID(EvtRecTrackIterator itTrk_p,
   if(pidp->IsPidInfoValid()) {
     prob_pip = pidp->probPion();
     prob_kp  = pidp->probKaon();
+    prob_p   = pidp->probProton();
   }
 }
 
