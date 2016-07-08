@@ -618,7 +618,12 @@ int Jpsi2invi::selectChargedTracks(SmartDataPtr<EvtRecEvent> evtRecEvent,
   m_ncharged = iGood.size();
   m_nptrk = iPGood.size();
   m_nmtrk = iMGood.size(); 
-  
+
+  if (m_nptrk > 0 && m_nmtrk > 0) {
+    EvtRecTrackIterator itTrk_p = evtRecTrkCol->begin() + iPGood[0];
+    EvtRecTrackIterator itTrk_m = evtRecTrkCol->begin() + iMGood[0];
+    saveTrkInfo(itTrk_p, itTrk_m);
+  }
   return iGood.size(); 
 }
 
@@ -641,13 +646,13 @@ int Jpsi2invi::selectPionPlusPionMinus(SmartDataPtr<EvtRecTrackCol> evtRecTrkCol
       // polar angle for both pions
       if ( ! ( fabs(cos(mdcTrk_p->theta())) < m_pion_polar_angle_max &&
       	       fabs(cos(mdcTrk_m->theta())) < m_pion_polar_angle_max )) continue;
-      if ( !evtflw_filled ) h_evtflw->Fill(3); // |cos#theta|<0.99
+      if ( !evtflw_filled ) h_evtflw->Fill(3); // |cos#theta| cut 
 
       // pion momentum
       if ( ! ( fabs(mdcTrk_p->p()) < m_pion_momentum_max  &&
       	       fabs(mdcTrk_m->p()) < m_pion_momentum_max )) continue;
 
-      if ( !evtflw_filled ) h_evtflw->Fill(4); //|p|<0.8  
+      if ( !evtflw_filled ) h_evtflw->Fill(4); //|p| cut 
       
       // track PID
       double prob_pip, prob_kp, prob_pim, prob_km, prob_p, prob_pb; 
@@ -672,10 +677,10 @@ int Jpsi2invi::selectPionPlusPionMinus(SmartDataPtr<EvtRecTrackCol> evtRecTrkCol
       // apply vertex fit
       RecMdcKalTrack *pipTrk = (*(evtRecTrkCol->begin()+iPGood[i1]))->mdcKalTrack();
       RecMdcKalTrack *pimTrk = (*(evtRecTrkCol->begin()+iMGood[i2]))->mdcKalTrack();
-	    
-      if (! hasGoodPiPiVertex(pipTrk, pimTrk, evtflw_filled) ) continue; 
 
-      saveTrkInfo(itTrk_p, itTrk_m); 
+      // savePionInfo(pipTrk, pimTrk);
+      
+      if (! hasGoodPiPiVertex(pipTrk, pimTrk, evtflw_filled) ) continue; 
 
       npipi++;
       evtflw_filled = true;
