@@ -122,7 +122,6 @@ private:
   // vertex 
   double m_vr0;
   double m_vz0;
-  double m_vtx_mrecpipi; // pipi invariant mass
 
   // PID info
   double m_prob_pip;
@@ -141,6 +140,17 @@ private:
   double m_pim_py;
   double m_pim_pz;
 
+  // fitted info
+  double m_vtx_mrecpipi; // pipi invariant mass   
+  double m_vtx_pip_px; 
+  double m_vtx_pip_py; 
+  double m_vtx_pip_pz; 
+  double m_vtx_pip_e;
+  double m_vtx_pim_px; 
+  double m_vtx_pim_py; 
+  double m_vtx_pim_pz; 
+  double m_vtx_pim_e;
+  
   
   // check MDC and EMC match
   long m_pion_matched;
@@ -196,7 +206,9 @@ private:
   void saveTrkInfo(EvtRecTrackIterator,
 		   EvtRecTrackIterator);
   void savePionInfo(RecMdcKalTrack *,
-		    RecMdcKalTrack *); 
+		    RecMdcKalTrack *);
+  void saveVtxInfo(HepLorentzVector,
+		   HepLorentzVector);  
   void saveGamInfo(std::vector<int>,
 		   SmartDataPtr<EvtRecTrackCol>);
   int selectChargedTracks(SmartDataPtr<EvtRecEvent>,
@@ -264,7 +276,6 @@ Jpsi2invi::Jpsi2invi(const std::string& name, ISvcLocator* pSvcLocator) :
   declareProperty("Ecms", m_ecms = 3.686);
   declareProperty("Vr0cut", m_vr0cut=1.0);
   declareProperty("Vz0cut", m_vz0cut=10.0);
-  // declareProperty("DiffPionLep", m_distin_pionlep=0.8);
   declareProperty("ChaCosthetaCut", m_cha_costheta_cut=0.93);
   declareProperty("TotalNumberOfChargedMax", m_total_number_of_charged_max=50);
   declareProperty("MinEstCut", m_min_emctime=0.0);
@@ -277,12 +288,12 @@ Jpsi2invi::Jpsi2invi(const std::string& name, ISvcLocator* pSvcLocator) :
   declareProperty("EnergyEndcapMin", m_energy_endcap_min=0.050); 
   declareProperty("PhotonIsoAngleMin", m_photon_iso_angle_min=10);
   declareProperty("PionPolarAngleMax", m_pion_polar_angle_max=0.99);
-  declareProperty("PionMomentumMax", m_pion_momentum_max=0.8); 
+  declareProperty("PionMomentumMax", m_pion_momentum_max=1.9); 
   declareProperty("ProbPionMin", m_prob_pion_min=0.001);
   declareProperty("DipionMassMin", m_dipion_mass_min=3.0); 
   declareProperty("DipionMassMax", m_dipion_mass_max=3.2); 
-  declareProperty("PiPiCosthetaMax", m_pipi_costheta_max=0.95);
-  declareProperty("PiPiSysCosthetaMax", m_pipisys_costheta_max=0.90);
+  declareProperty("PiPiCosthetaMax", m_pipi_costheta_max=0.99);
+  declareProperty("PiPiSysCosthetaMax", m_pipisys_costheta_max=0.99);
 }
 
 
@@ -350,10 +361,10 @@ void Jpsi2invi::book_histogram() {
   h_evtflw->GetXaxis()->SetBinLabel(2, "N_{Good}=2");
   h_evtflw->GetXaxis()->SetBinLabel(3, "N_{#gamma}<20");
   h_evtflw->GetXaxis()->SetBinLabel(4, "|cos#theta|<0.99");
-  h_evtflw->GetXaxis()->SetBinLabel(5, "|p|<0.8");
+  h_evtflw->GetXaxis()->SetBinLabel(5, "|p|<1.9");
   h_evtflw->GetXaxis()->SetBinLabel(6, "PID"); 
-  h_evtflw->GetXaxis()->SetBinLabel(7, "cos#theta_{#pi^{+}#pi^{-}}<0.95");
-  h_evtflw->GetXaxis()->SetBinLabel(8, "cos#theta_{#pi#pi sys}<0.9");
+  h_evtflw->GetXaxis()->SetBinLabel(7, "cos#theta_{#pi^{+}#pi^{-}}<0.99");
+  h_evtflw->GetXaxis()->SetBinLabel(8, "cos#theta_{#pi#pi sys}<0.99");
   h_evtflw->GetXaxis()->SetBinLabel(9, "3<M_{#pi#pi}^{rec}<3.2");
 }
 
@@ -390,7 +401,7 @@ void Jpsi2invi::book_tree() {
   //vertex
   m_tree->Branch("vr0", &m_vr0, "vr0/D");
   m_tree->Branch("vz0", &m_vz0, "vz0/D");
-  m_tree->Branch("vtx_mrecpipi", &m_vtx_mrecpipi, "vtx_mrecpipi/D");
+
 	  
   //netual tracks
   m_tree->Branch("nshow", &m_nshow, "nshow/I");
@@ -416,6 +427,16 @@ void Jpsi2invi::book_tree() {
   m_tree->Branch("pim_px", &m_pim_px, "pim_px/D");
   m_tree->Branch("pim_py", &m_pim_py, "pim_py/D");
   m_tree->Branch("pim_pz", &m_pim_pz, "pim_pz/D");
+
+  // fitted info
+  m_tree->Branch("vtx_mrecpipi", &m_vtx_mrecpipi, "vtx_mrecpipi/D");
+  m_tree->Branch("vtx_pip_px", &m_vtx_pip_px, "vtx_pip_px/D");
+  m_tree->Branch("vtx_pip_py", &m_vtx_pip_py, "vtx_pip_py/D");
+  m_tree->Branch("vtx_pip_pz", &m_vtx_pip_pz, "vtx_pip_pz/D");
+  m_tree->Branch("vtx_pip_e", &m_vtx_pip_e, "vtx_pip_e/D");
+  m_tree->Branch("vtx_pim_px", &m_vtx_pim_px, "vtx_pim_px/D");
+  m_tree->Branch("vtx_pim_py", &m_vtx_pim_py, "vtx_pim_py/D");
+  m_tree->Branch("vtx_pim_e", &m_vtx_pim_e, "vtx_pim_e/D");
   
   // MC truth info
   if (!m_isMonteCarlo) return; 
@@ -701,7 +722,7 @@ int Jpsi2invi::selectPionPlusPionMinus(SmartDataPtr<EvtRecTrackCol> evtRecTrkCol
       savePionInfo(pipTrk, pimTrk);
       
       if (! hasGoodPiPiVertex(pipTrk, pimTrk, evtflw_filled) ) continue; 
-
+      
       npipi++;
       evtflw_filled = true;
     }
@@ -782,16 +803,16 @@ bool Jpsi2invi::hasGoodPiPiVertex(RecMdcKalTrack *pipTrk,
   double cos2pisys = (p4_vtx_pip + p4_vtx_pim).cosTheta();
 
   if( ! (cospipi < m_pipi_costheta_max) ) return false;
-  if( !evtflw_filled ) h_evtflw->Fill(6); // "cos#theta_{#pi^{+}#pi^{-}}<0.95"
+  if( !evtflw_filled ) h_evtflw->Fill(6); // "cos#theta_{#pi^{+}#pi^{-}}<0.99"
 
   if( ! (fabs(cos2pisys) < m_pipisys_costheta_max ) ) return false;
-  if( !evtflw_filled ) h_evtflw->Fill(7); // cos#theta_{#pi#pi sys}<0.9 
+  if( !evtflw_filled ) h_evtflw->Fill(7); // cos#theta_{#pi#pi sys}<0.99 
 
   if( ! ( p4_vtx_recpipi.m() >= m_dipion_mass_min &&
 	  p4_vtx_recpipi.m() <= m_dipion_mass_max) ) return false;
   if( !evtflw_filled ) h_evtflw->Fill(8); // 3<M_{#pi#pi}^{rec}<3.2
 
-
+  saveVtxInfo(p4_vtx_pip, p4_vtx_pim); 
   m_vtx_mrecpipi = p4_vtx_recpipi.m();
   
   return true;
@@ -940,3 +961,19 @@ void Jpsi2invi::savePionInfo(RecMdcKalTrack *pipTrk,
   m_pim_pz = pimTrk->pz();
   
 }
+
+void Jpsi2invi::saveVtxInfo(HepLorentzVector p4_vtx_pip,
+			    HepLorentzVector p4_vtx_pim){
+
+  m_vtx_pip_px = p4_vtx_pip.px();
+  m_vtx_pip_py = p4_vtx_pip.py();
+  m_vtx_pip_pz = p4_vtx_pip.pz();
+  m_vtx_pip_e = p4_vtx_pip.e();
+
+  m_vtx_pim_px = p4_vtx_pim.px();
+  m_vtx_pim_py = p4_vtx_pim.py();
+  m_vtx_pim_pz = p4_vtx_pim.pz();
+  m_vtx_pim_e = p4_vtx_pim.e();
+}
+
+
