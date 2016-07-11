@@ -95,21 +95,21 @@ private:
   int m_ncharged;
   int m_nptrk;
   int m_nmtrk;
-  double m_pip_p; 
-  double m_pip_px; 
-  double m_pip_py; 
-  double m_pip_pz; 
-  double m_pip_theta; 
-  double m_pip_phi; 
-  double m_pip_eraw; 
+  double m_trkp_p; 
+  double m_trkp_px; 
+  double m_trkp_py; 
+  double m_trkp_pz; 
+  double m_trkp_theta; 
+  double m_trkp_phi; 
+  double m_trkp_eraw; 
   
-  double m_pim_p; 
-  double m_pim_px; 
-  double m_pim_py; 
-  double m_pim_pz; 
-  double m_pim_theta; 
-  double m_pim_phi; 
-  double m_pim_eraw; 
+  double m_trkm_p; 
+  double m_trkm_px; 
+  double m_trkm_py; 
+  double m_trkm_pz; 
+  double m_trkm_theta; 
+  double m_trkm_phi; 
+  double m_trkm_eraw; 
 
   // neutral tracks
   int m_nshow;
@@ -131,6 +131,16 @@ private:
   double m_prob_km;
   double m_prob_p; 
   double m_prob_pb; 
+
+  // pion info
+  double m_pip_px;
+  double m_pip_py;
+  double m_pip_pz;
+
+  double m_pim_px;
+  double m_pim_py;
+  double m_pim_pz;
+
   
   // check MDC and EMC match
   long m_pion_matched;
@@ -185,6 +195,8 @@ private:
   void saveGenInfo(); 
   void saveTrkInfo(EvtRecTrackIterator,
 		   EvtRecTrackIterator);
+  void savePionInfo(RecMdcKalTrack *,
+		    RecMdcKalTrack *); 
   void saveGamInfo(std::vector<int>,
 		   SmartDataPtr<EvtRecTrackCol>);
   int selectChargedTracks(SmartDataPtr<EvtRecEvent>,
@@ -359,21 +371,21 @@ void Jpsi2invi::book_tree() {
   m_tree->Branch("ncharged", &m_ncharged, "ncharged/I");
   m_tree->Branch("nptrk", &m_nptrk, "nptrk/I");
   m_tree->Branch("nmtrk", &m_nmtrk, "nmtrk/I");
-  m_tree->Branch("pip_p", &m_pip_p, "pip_p/D"); 
-  m_tree->Branch("pip_px", &m_pip_px, "pip_px/D"); 
-  m_tree->Branch("pip_py", &m_pip_py, "pip_py/D"); 
-  m_tree->Branch("pip_pz", &m_pip_pz, "pip_pz/D"); 
-  m_tree->Branch("pip_theta", &m_pip_theta, "pip_theta/D"); 
-  m_tree->Branch("pip_phi", &m_pip_phi, "pip_phi/D"); 
-  m_tree->Branch("pip_eraw", &m_pip_eraw, "pip_eraw/D"); 
+  m_tree->Branch("trkp_p", &m_trkp_p, "trkp_p/D"); 
+  m_tree->Branch("trkp_px", &m_trkp_px, "trkp_px/D"); 
+  m_tree->Branch("trkp_py", &m_trkp_py, "trkp_py/D"); 
+  m_tree->Branch("trkp_pz", &m_trkp_pz, "trkp_pz/D"); 
+  m_tree->Branch("trkp_theta", &m_trkp_theta, "trkp_theta/D"); 
+  m_tree->Branch("trkp_phi", &m_trkp_phi, "trkp_phi/D"); 
+  m_tree->Branch("trkp_eraw", &m_trkp_eraw, "trkp_eraw/D"); 
 
-  m_tree->Branch("pim_p", &m_pim_p, "pim_p/D"); 
-  m_tree->Branch("pim_px", &m_pim_px, "pim_px/D"); 
-  m_tree->Branch("pim_py", &m_pim_py, "pim_py/D"); 
-  m_tree->Branch("pim_pz", &m_pim_pz, "pim_pz/D"); 
-  m_tree->Branch("pim_theta", &m_pim_theta, "pim_theta/D"); 
-  m_tree->Branch("pim_phi", &m_pim_phi, "pim_phi/D"); 
-  m_tree->Branch("pim_eraw", &m_pim_eraw, "pim_eraw/D"); 
+  m_tree->Branch("trkm_p", &m_trkm_p, "trkm_p/D"); 
+  m_tree->Branch("trkm_px", &m_trkm_px, "trkm_px/D"); 
+  m_tree->Branch("trkm_py", &m_trkm_py, "trkm_py/D"); 
+  m_tree->Branch("trkm_pz", &m_trkm_pz, "trkm_pz/D"); 
+  m_tree->Branch("trkm_theta", &m_trkm_theta, "trkm_theta/D"); 
+  m_tree->Branch("trkm_phi", &m_trkm_phi, "trkm_phi/D"); 
+  m_tree->Branch("trkm_eraw", &m_trkm_eraw, "trkm_eraw/D"); 
 	  
   //vertex
   m_tree->Branch("vr0", &m_vr0, "vr0/D");
@@ -396,6 +408,14 @@ void Jpsi2invi::book_tree() {
   m_tree->Branch("prob_p", &m_prob_p, "prob_p/D"); 
   m_tree->Branch("prob_pb", &m_prob_pb, "prob_pb/D"); 
 
+  // save pion info
+  m_tree->Branch("pip_px", &m_pip_px, "pip_px/D");
+  m_tree->Branch("pip_py", &m_pip_py, "pip_py/D");
+  m_tree->Branch("pip_pz", &m_pip_pz, "pip_pz/D");
+
+  m_tree->Branch("pim_px", &m_pim_px, "pim_px/D");
+  m_tree->Branch("pim_py", &m_pim_py, "pim_py/D");
+  m_tree->Branch("pim_pz", &m_pim_pz, "pim_pz/D");
   
   // MC truth info
   if (!m_isMonteCarlo) return; 
@@ -678,7 +698,7 @@ int Jpsi2invi::selectPionPlusPionMinus(SmartDataPtr<EvtRecTrackCol> evtRecTrkCol
       RecMdcKalTrack *pipTrk = (*(evtRecTrkCol->begin()+iPGood[i1]))->mdcKalTrack();
       RecMdcKalTrack *pimTrk = (*(evtRecTrkCol->begin()+iMGood[i2]))->mdcKalTrack();
 
-      // savePionInfo(pipTrk, pimTrk);
+      savePionInfo(pipTrk, pimTrk);
       
       if (! hasGoodPiPiVertex(pipTrk, pimTrk, evtflw_filled) ) continue; 
 
@@ -860,29 +880,29 @@ void Jpsi2invi::saveTrkInfo(EvtRecTrackIterator itTrk_p,
 			    EvtRecTrackIterator itTrk_m) {
 
   RecMdcTrack* mdcTrk_p = (*itTrk_p)->mdcTrack(); 
-  m_pip_p = mdcTrk_p->p();
-  m_pip_px = mdcTrk_p->px();
-  m_pip_py = mdcTrk_p->py();
-  m_pip_pz = mdcTrk_p->pz();
-  m_pip_theta = mdcTrk_p->theta();
-  m_pip_phi = mdcTrk_p->phi();
+  m_trkp_p = mdcTrk_p->p();
+  m_trkp_px = mdcTrk_p->px();
+  m_trkp_py = mdcTrk_p->py();
+  m_trkp_pz = mdcTrk_p->pz();
+  m_trkp_theta = mdcTrk_p->theta();
+  m_trkp_phi = mdcTrk_p->phi();
   
   if((*itTrk_p)->isEmcShowerValid()){
     RecEmcShower *emcTrk_p = (*itTrk_p)->emcShower();
-    m_pip_eraw = emcTrk_p->energy();
+    m_trkp_eraw = emcTrk_p->energy();
   }
 
   RecMdcTrack* mdcTrk_m = (*itTrk_m)->mdcTrack();
-  m_pim_p = mdcTrk_m->p();
-  m_pim_px = mdcTrk_m->px();
-  m_pim_py = mdcTrk_m->py();
-  m_pim_pz = mdcTrk_m->pz();
-  m_pim_theta = mdcTrk_m->theta();
-  m_pim_phi = mdcTrk_m->phi();
+  m_trkm_p = mdcTrk_m->p();
+  m_trkm_px = mdcTrk_m->px();
+  m_trkm_py = mdcTrk_m->py();
+  m_trkm_pz = mdcTrk_m->pz();
+  m_trkm_theta = mdcTrk_m->theta();
+  m_trkm_phi = mdcTrk_m->phi();
   
   if((*itTrk_m)->isEmcShowerValid()){
     RecEmcShower *emcTrk_m = (*itTrk_m)->emcShower();
-    m_pim_eraw = emcTrk_m->energy();
+    m_trkm_eraw = emcTrk_m->energy();
   }
 
 }
@@ -908,3 +928,15 @@ void Jpsi2invi::saveGamInfo(std::vector<int> iGam,
   }
 }
 
+void Jpsi2invi::savePionInfo(RecMdcKalTrack *pipTrk,
+			     RecMdcKalTrack *pimTrk){
+
+  m_pip_px = pipTrk->px();
+  m_pip_py = pipTrk->py();
+  m_pip_pz = pipTrk->pz();
+
+  m_pim_px = pimTrk->px();
+  m_pim_py = pimTrk->py();
+  m_pim_pz = pimTrk->pz();
+  
+}
