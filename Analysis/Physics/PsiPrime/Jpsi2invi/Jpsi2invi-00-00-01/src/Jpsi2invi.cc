@@ -141,7 +141,6 @@ private:
   double m_pim_pz;
 
   // fitted info
-  double m_vtx_mrecpipi; // pipi invariant mass   
   double m_vtx_pip_px; 
   double m_vtx_pip_py; 
   double m_vtx_pip_pz; 
@@ -150,8 +149,12 @@ private:
   double m_vtx_pim_py; 
   double m_vtx_pim_pz; 
   double m_vtx_pim_e;
-  
-  
+
+  double m_vtx_mpipi;
+  double m_vtx_mrecpipi;
+  double m_vtx_cospipi;
+  double m_vtx_cos2pisys; 
+    
   // check MDC and EMC match
   long m_pion_matched;
   long m_lep_matched;
@@ -429,7 +432,6 @@ void Jpsi2invi::book_tree() {
   m_tree->Branch("pim_pz", &m_pim_pz, "pim_pz/D");
 
   // fitted info
-  m_tree->Branch("vtx_mrecpipi", &m_vtx_mrecpipi, "vtx_mrecpipi/D");
   m_tree->Branch("vtx_pip_px", &m_vtx_pip_px, "vtx_pip_px/D");
   m_tree->Branch("vtx_pip_py", &m_vtx_pip_py, "vtx_pip_py/D");
   m_tree->Branch("vtx_pip_pz", &m_vtx_pip_pz, "vtx_pip_pz/D");
@@ -437,6 +439,11 @@ void Jpsi2invi::book_tree() {
   m_tree->Branch("vtx_pim_px", &m_vtx_pim_px, "vtx_pim_px/D");
   m_tree->Branch("vtx_pim_py", &m_vtx_pim_py, "vtx_pim_py/D");
   m_tree->Branch("vtx_pim_e", &m_vtx_pim_e, "vtx_pim_e/D");
+
+  m_tree->Branch("vtx_mpipi", &m_vtx_mpipi, "vtx_mpipi/D");
+  m_tree->Branch("vtx_mrecpipi", &m_vtx_mrecpipi, "vtx_mrecpipi/D");
+  m_tree->Branch("vtx_cospipi", &m_vtx_cospipi, "vtx_cospipi/D");
+  m_tree->Branch("vtx_cos2pisys", &m_vtx_cos2pisys, "vtx_cos2pisys/D");
   
   // MC truth info
   if (!m_isMonteCarlo) return; 
@@ -761,7 +768,7 @@ bool Jpsi2invi::hasGoodPiPiVertex(RecMdcKalTrack *pipTrk,
 
   HepLorentzVector pcms(0.011*m_ecms, 0., 0., m_ecms);
 
-  HepLorentzVector p4_vtx_pip, p4_vtx_pim,p4_vtx_recpipi;
+  HepLorentzVector p4_vtx_pip, p4_vtx_pim, p4_vtx_pipi, p4_vtx_recpipi;
   WTrackParameter wvpipTrk, wvpimTrk;
   pipTrk->setPidType(RecMdcKalTrack::pion);
   wvpipTrk = WTrackParameter(PION_MASS, pipTrk->getZHelix(), pipTrk->getZError());
@@ -798,6 +805,7 @@ bool Jpsi2invi::hasGoodPiPiVertex(RecMdcKalTrack *pipTrk,
   p4_vtx_pip = vtxfit->pfit(0) ;
   p4_vtx_pim = vtxfit->pfit(1) ;
   p4_vtx_recpipi = pcms - p4_vtx_pip - p4_vtx_pim;
+  p4_vtx_pipi = p4_vtx_pip + p4_vtx_pim;
 
   double cospipi = cos(p4_vtx_pip.vect().angle(p4_vtx_pim.vect()));
   double cos2pisys = (p4_vtx_pip + p4_vtx_pim).cosTheta();
@@ -814,6 +822,9 @@ bool Jpsi2invi::hasGoodPiPiVertex(RecMdcKalTrack *pipTrk,
 
   saveVtxInfo(p4_vtx_pip, p4_vtx_pim); 
   m_vtx_mrecpipi = p4_vtx_recpipi.m();
+  m_vtx_mpipi = p4_vtx_pipi.m();
+  m_vtx_cospipi = cospipi;
+  m_vtx_cos2pisys = cos2pisys; 
   
   return true;
 }
@@ -974,6 +985,7 @@ void Jpsi2invi::saveVtxInfo(HepLorentzVector p4_vtx_pip,
   m_vtx_pim_py = p4_vtx_pim.py();
   m_vtx_pim_pz = p4_vtx_pim.pz();
   m_vtx_pim_e = p4_vtx_pim.e();
+
 }
 
 
