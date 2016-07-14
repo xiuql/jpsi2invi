@@ -9,7 +9,7 @@ __created__ = "[2016-06-02 Thu 09:42]"
 
 import sys
 import os
-
+from hurry.filesize import size 
 
 def usage():
     sys.stdout.write('''
@@ -24,7 +24,7 @@ AUTHOR
     SHI Xin <shixin@ihep.ac.cn> 
 
 DATE
-    June 2016 
+    July 2016 
 \n''')
 
     
@@ -47,19 +47,13 @@ def main():
             total_size = total_size + os.path.getsize(os.path.join(root,f))
 
     sys.stdout.write('Found %s files, with total size %s.\n' %(
-        len(file_list), convert_size_to_str(total_size)))
+        len(file_list), size(total_size)))
 
     if len(file_list) < num:
         jobs_missing = jobs_created.difference(file_list)
-        sys.stdout.write('Missing jobs are: %s\n' % list(jobs_missing))
+        jobs_missing = [str(li) for li in jobs_missing]
+        sys.stdout.write('Missing jobs are: %s\n' % ','.join(jobs_missing))
         
     
-def convert_size_to_str(size):
-    c_1GB = 1024*1024*1024
-    factor = float(size)/c_1GB
-    size_str = '%.1fGB' %factor
-    return size_str
-
-
 if __name__ == '__main__':
     main()

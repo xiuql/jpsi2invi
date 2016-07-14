@@ -12,12 +12,12 @@ usage() {
     printf "\nOPTIONS\n" 
     printf "\n\t%-5s  %-40s\n"  "0.1"      "[run data sample]" 
     printf "\n\t%-5s  %-40s\n"  "0.1.1"    "Run with a few samples" 
-    printf "\n\t%-5s  %-40s\n"  "0.1.2"    "Split data sample with each group 40G"
+    printf "\n\t%-5s  %-40s\n"  "0.1.2"    "Split data sample with each group 20G"
     printf "\n\t%-5s  %-40s\n"  "0.1.3"    "Submit PBS jobs on data"
     printf "\n\t%-5s  %-40s\n"  "0.1.4"    "Check PBS jobs on data."
-    printf "\n\t%-5s  %-40s\n"  "0.1.4.1"  "arXiv prod files."
     printf "\n\t%-5s  %-40s\n"  "0.1.5"    "Select events."
-    printf "\n\t%-5s  %-40s\n"  "0.1.6"    "run Plotter on data."
+    printf "\n\t%-5s  %-40s\n"  "0.1.6"    "Submit events jobs on data."
+    printf "\n\t%-5s  %-40s\n"  "0.1.7"    "Check events jobs on data."
     printf "\nAUTHOR\n"
     printf "\n\t%-5s\n" "SHI Xin <shixin@ihep.ac.cn>"
     printf "\nDATE\n"
@@ -46,6 +46,8 @@ case $option in
 	   ;;
 
     0.1.3) echo "Submit PBS jobs on data..."
+	   mkdir run/data
+	   mkdir run/log 
 	   qsub pbs/qsub_jpsi2invi_data.sh  
 	   ;;
 
@@ -53,21 +55,21 @@ case $option in
 	   ./python/chk_pbsjobs.py $HOME/bes/jpsi2invi/v0.1/run/data  633
 	   ;;
     
-    0.1.4.1) echo  "Arxiv production files to v1 ..."
-	   mkdir run/v1
-	   mv run/data run/v1
-	   mv run/log run/v1
-	   mv run/samples run/v1 
-	   ;; 
-
     0.1.5) echo  "Select events on data..."
-	   #./bin/runPlotter -i run/data/jpsi2invi_data-1.root -o plotter_data.root 
-	   #./python/run_plotter.py  run/data/jpsi2invi_data-1.root  run/plotter/jpsi2invi_data-1.root
-	   #qsub pbs/qsub_jpsi2invi_plotter_data.sh
 	   ./python/sel_events.py  run/data/jpsi2invi_data-1.root  run/events/jpsi2invi_data-1.root 
 	   ;; 
-    
-    0.1.6) echo  "Merge root files..."
+
+    0.1.6) echo "Submit selection PBS jobs on data..."
+	   mkdir run/events
+	   mkdir run/log 
+	   qsub pbs/qsub_jpsi2invi_events_data.sh  
+	   ;;
+
+    0.1.7) echo "Check PBS jobs on events data..."
+	   ./python/chk_pbsjobs.py $HOME/bes/jpsi2invi/v0.1/run/events  633
+	   ;;
+
+    0.1.8) echo  "Merge root files..."
 	   ./python/mrg_rootfiles.py  $HOME/bes/jpsi2invi/v0.1/run/data 
 	   ;; 
 

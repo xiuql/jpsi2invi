@@ -11,7 +11,6 @@ if [[ $# -eq 0 ]]; then
     printf "\n\t%-5s\n" "./build.sh [OPTION]" 
     printf "\nOPTIONS\n" 
     printf "\n\t%-5s  %-40s\n"  "1"  "build Jpsi2invi analyzer" 
-    printf "\n\t%-5s  %-40s\n"  "2"  "build runPlotter" 
 fi
 
 option=$1
@@ -21,9 +20,5 @@ case $option in
        cd Analysis/Physics/PsiPrime/Jpsi2invi/Jpsi2invi-00-00-01/cmt 
        gmake  
        ;;
-    2) echo "Building runPlotter..."
-       make  
-       ;;
-    
 esac
 
