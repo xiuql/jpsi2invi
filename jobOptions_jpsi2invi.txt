@@ -21,8 +21,8 @@ ApplicationMgr.EvtMax = 5000;
 // ApplicationMgr.EvtMax = -1;
 
 Jpsi2invi.OutputFileName="jpsi2invi.root";
-// Jpsi2invi.IsMonteCarlo="false";
-Jpsi2invi.IsMonteCarlo="true";
+Jpsi2invi.IsMonteCarlo="false";
+// Jpsi2invi.IsMonteCarlo="true";
 
 
 				
