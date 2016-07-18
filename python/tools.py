@@ -34,3 +34,45 @@ def duration(seconds):
             duration.append('%d second' % seconds + 's'*(seconds != 1))
     return ' '.join(duration)
 
+
+
+class UserFile(object):
+    '''Class to handle file  '''
+    def __init__(self, filename=None, data=None):
+        self.data = []
+        if data != None:
+            self.data = data
+            
+        if filename:
+            self.input(filename)
+            self.file = filename
+
+    def append(self, content):
+        self.data.append(content)
+
+    def input(self, filename, verbose=0):
+        fi = open(filename, 'r')
+        for line in fi:
+            self.data.append(line)
+        fi.close()
+
+    def input_data(self, data):
+        self.data = data
+        
+        
+class BossLogFile(UserFile):
+    "Handle BOSS log file"
+
+    def __init__(self, filename=None):
+        self.terminated = False
+        UserFile.__init__(self, filename)
+        self.parse()
+        
+    def parse(self):
+        "parse BOSS log file" 
+        line_no = -1
+        for line in self.data:
+            line_no += 1
+            line = line.strip()
+            if 'INFO Application Manager Terminated successfully' in line:
+                self.terminated = True

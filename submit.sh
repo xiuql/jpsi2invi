@@ -47,7 +47,7 @@ case $option in
 
     0.1.3) echo "Submit PBS jobs on data..."
 	   mkdir run/data
-	   mkdir run/log 
+	   mkdir run/log/data  
 	   qsub pbs/qsub_jpsi2invi_data.sh  
 	   ;;
 
@@ -61,7 +61,7 @@ case $option in
 
     0.1.6) echo "Submit selection PBS jobs on data..."
 	   mkdir run/events
-	   mkdir run/log 
+	   mkdir run/log/events  
 	   qsub pbs/qsub_jpsi2invi_events_data.sh  
 	   ;;
 

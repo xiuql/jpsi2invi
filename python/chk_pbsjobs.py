@@ -10,6 +10,8 @@ __created__ = "[2016-06-02 Thu 09:42]"
 import sys
 import os
 from hurry.filesize import size 
+from tools import BossLogFile
+
 
 def usage():
     sys.stdout.write('''
@@ -37,6 +39,10 @@ def main():
     num = int(args[1])
     jobs_created = set(range(1, num+1))
 
+    log = src 
+    logdir = src.split('/')[-1]
+    log = log.replace(logdir, 'log/%s' %logdir) 
+
     sys.stdout.write('Scanning %s...\n' %src)
 
     file_list = []
@@ -48,12 +54,24 @@ def main():
 
     sys.stdout.write('Found %s files, with total size %s.\n' %(
         len(file_list), size(total_size)))
-
+    
     if len(file_list) < num:
         jobs_missing = jobs_created.difference(file_list)
         jobs_missing = [str(li) for li in jobs_missing]
         sys.stdout.write('Missing jobs are: %s\n' % ','.join(jobs_missing))
         
+    sys.stdout.write('Checking log files...\n')
+    jobs_not_terminated = []
+    for root, dirs, files in os.walk(log):
+        for f in files:
+            l = BossLogFile( os.path.join(root, f) )
+            if not l.terminated:
+                job = f.split('-')[-1]
+                jobs_not_terminated.append(job)
+
+    sys.stdout.write('Non-terminated jobs are (%s): %s\n' % (
+        len(jobs_not_terminated), ','.join(jobs_not_terminated)))
     
+                
 if __name__ == '__main__':
     main()
