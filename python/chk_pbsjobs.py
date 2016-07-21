@@ -10,7 +10,7 @@ __created__ = "[2016-06-02 Thu 09:42]"
 import sys
 import os
 from hurry.filesize import size 
-from tools import BossLogFile
+from tools import BossLogFile, EventsLogFile 
 
 
 def usage():
@@ -41,8 +41,15 @@ def main():
 
     log = src 
     logdir = src.split('/')[-1]
+    if logdir == 'data':
+        logfiletype = 'BossLogFile'
+    elif logdir == 'events':
+        logfiletype = 'EventsLogFile'
+    else:
+        raise NameError(logdir)
+    
     log = log.replace(logdir, 'log/%s' %logdir) 
-
+    
     sys.stdout.write('Scanning %s...\n' %src)
 
     file_list = []
@@ -64,10 +71,19 @@ def main():
     jobs_not_terminated = []
     for root, dirs, files in os.walk(log):
         for f in files:
-            l = BossLogFile( os.path.join(root, f) )
+            if logfiletype == 'BossLogFile': 
+                l = BossLogFile( os.path.join(root, f) )
+            elif logfiletype == 'EventsLogFile':
+                l = EventsLogFile( os.path.join(root, f) )
+            else:
+                raise NameError(logfiletype) 
+
             if not l.terminated:
+                sys.stdout.write('%s ... Not OK.\n' %f)
                 job = f.split('-')[-1]
                 jobs_not_terminated.append(job)
+            else:
+                sys.stdout.write('%s ... OK.\n' %f)
 
     sys.stdout.write('Non-terminated jobs are (%s): %s\n' % (
         len(jobs_not_terminated), ','.join(jobs_not_terminated)))

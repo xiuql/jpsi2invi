@@ -76,3 +76,20 @@ class BossLogFile(UserFile):
             line = line.strip()
             if 'INFO Application Manager Terminated successfully' in line:
                 self.terminated = True
+
+class EventsLogFile(UserFile):
+    "Handle Events log file"
+
+    def __init__(self, filename=None):
+        self.terminated = False
+        UserFile.__init__(self, filename)
+        self.parse()
+        
+    def parse(self):
+        "parse Events log file" 
+        line_no = -1
+        for line in self.data:
+            line_no += 1
+            line = line.strip()
+            if 'Done ' in line:
+                self.terminated = True
