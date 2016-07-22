@@ -18,10 +18,11 @@ usage() {
     printf "\n\t%-5s  %-40s\n"  "0.1.5"    "Select events."
     printf "\n\t%-5s  %-40s\n"  "0.1.6"    "Submit events jobs on data."
     printf "\n\t%-5s  %-40s\n"  "0.1.7"    "Check events jobs on data."
+    printf "\n\t%-5s  %-40s\n"  "0.1.8"    "Merge events files." 
     printf "\nAUTHOR\n"
     printf "\n\t%-5s\n" "SHI Xin <shixin@ihep.ac.cn>"
     printf "\nDATE\n"
-    printf "\n\t%-5s\n" "JUNE 2016"     
+    printf "\n\t%-5s\n" "JULY 2016"     
 }
 
 
@@ -66,11 +67,11 @@ case $option in
 	   ;;
 
     0.1.7) echo "Check PBS jobs on events data..."
-	   ./python/chk_pbsjobs.py $HOME/bes/jpsi2invi/v0.1/run/events  633
+	   ./python/chk_pbsjobs.py run/events  633
 	   ;;
 
     0.1.8) echo  "Merge root files..."
-	   ./python/mrg_rootfiles.py  $HOME/bes/jpsi2invi/v0.1/run/data 
+	   ./python/mrg_rootfiles.py  run/events run/hist 
 	   ;; 
 
     
