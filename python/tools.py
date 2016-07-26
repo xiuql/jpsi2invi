@@ -17,13 +17,6 @@ import subprocess
 # Function 
 # ---------------------------------------------
 
-
-def convert_size_from_str(size_str):
-    c_1GB = 1024*1024*1024
-    factor = eval(size_str.split('G')[0])
-    return factor*c_1GB
-
-
 def check_and_join(filepath, filename, mode=''):
     if not os.access(filepath, os.F_OK):
         sys.stdout.write('creating dir %s ...' % filepath)
@@ -38,6 +31,18 @@ def check_and_join(filepath, filename, mode=''):
             os.remove(file_)
 
     return file_
+
+def check_outfile_path(outfile):
+    path, tail = os.path.split(outfile)
+    if path != '' and not os.access(path, os.F_OK) :
+        sys.stdout.write('Creating dir %s ...\n'  % path)
+        os.makedirs(path)
+
+
+def convert_size_from_str(size_str):
+    c_1GB = 1024*1024*1024
+    factor = eval(size_str.split('G')[0])
+    return factor*c_1GB
 
 
 def duration(seconds):

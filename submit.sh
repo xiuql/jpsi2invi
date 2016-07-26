@@ -19,6 +19,7 @@ usage() {
     printf "\n\t%-5s  %-40s\n"  "0.1.6"    "Submit events jobs on data."
     printf "\n\t%-5s  %-40s\n"  "0.1.7"    "Check events jobs on data."
     printf "\n\t%-5s  %-40s\n"  "0.1.8"    "Merge events files." 
+    printf "\n\t%-5s  %-40s\n"  "0.1.9"    "Plot summary with data." 
     printf "\nAUTHOR\n"
     printf "\n\t%-5s\n" "SHI Xin <shixin@ihep.ac.cn>"
     printf "\nDATE\n"
@@ -72,6 +73,10 @@ case $option in
 
     0.1.8) echo  "Merge root files..."
 	   ./python/mrg_rootfiles.py  run/events run/hist 
+	   ;; 
+
+    0.1.9) echo  "Plot summary with data..."
+	   ./python/plt_summary.py 
 	   ;; 
 
     
