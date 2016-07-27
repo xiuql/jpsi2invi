@@ -20,10 +20,7 @@ usage() {
     printf "\n\t%-5s  %-40s\n"  "0.1.7"    "Check events jobs on data."
     printf "\n\t%-5s  %-40s\n"  "0.1.8"    "Merge events files." 
     printf "\n\t%-5s  %-40s\n"  "0.1.9"    "Plot summary with data." 
-    printf "\nAUTHOR\n"
-    printf "\n\t%-5s\n" "SHI Xin <shixin@ihep.ac.cn>"
-    printf "\nDATE\n"
-    printf "\n\t%-5s\n" "JULY 2016"     
+    printf "\n"
 }
 
 
