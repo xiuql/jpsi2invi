@@ -18,10 +18,9 @@ usage() {
     printf "\n\t%-5s  %-40s\n"  "0.1.5"    "Select events."
     printf "\n\t%-5s  %-40s\n"  "0.1.6"    "Submit events jobs on data."
     printf "\n\t%-5s  %-40s\n"  "0.1.7"    "Check events jobs on data."
-    printf "\nAUTHOR\n"
-    printf "\n\t%-5s\n" "SHI Xin <shixin@ihep.ac.cn>"
-    printf "\nDATE\n"
-    printf "\n\t%-5s\n" "JUNE 2016"     
+    printf "\n\t%-5s  %-40s\n"  "0.1.8"    "Merge events files." 
+    printf "\n\t%-5s  %-40s\n"  "0.1.9"    "Plot summary with data." 
+    printf "\n"
 }
 
 
@@ -47,7 +46,7 @@ case $option in
 
     0.1.3) echo "Submit PBS jobs on data..."
 	   mkdir run/data
-	   mkdir run/log 
+	   mkdir run/log/data  
 	   qsub pbs/qsub_jpsi2invi_data.sh  
 	   ;;
 
@@ -61,16 +60,20 @@ case $option in
 
     0.1.6) echo "Submit selection PBS jobs on data..."
 	   mkdir run/events
-	   mkdir run/log 
+	   mkdir run/log/events  
 	   qsub pbs/qsub_jpsi2invi_events_data.sh  
 	   ;;
 
     0.1.7) echo "Check PBS jobs on events data..."
-	   ./python/chk_pbsjobs.py $HOME/bes/jpsi2invi/v0.1/run/events  633
+	   ./python/chk_pbsjobs.py run/events  633
 	   ;;
 
     0.1.8) echo  "Merge root files..."
-	   ./python/mrg_rootfiles.py  $HOME/bes/jpsi2invi/v0.1/run/data 
+	   ./python/mrg_rootfiles.py  run/events run/hist 
+	   ;; 
+
+    0.1.9) echo  "Plot summary with data..."
+	   ./python/plt_summary.py 
 	   ;; 
 
     

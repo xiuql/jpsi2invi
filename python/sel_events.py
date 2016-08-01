@@ -13,7 +13,7 @@ import math
 import ROOT 
 from progressbar import Bar, Percentage, ProgressBar
 from time import time 
-from tools import duration 
+from tools import duration, check_outfile_path
 
 #TEST=True 
 TEST=False
@@ -72,10 +72,7 @@ def main():
     
     infile = args[0]
     outfile = args[1]
-    path, tail = os.path.split(outfile)
-    if path != '' and not os.access(path, os.F_OK) :
-        sys.stdout.write('Creating dir %s ...\n'  % path)
-        os.makedirs(path)
+    check_outfile_path(outfile)
 
     fin = ROOT.TFile(infile)
     t = fin.Get('tree')

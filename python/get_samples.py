@@ -9,6 +9,7 @@ __created__ = "[2016-05-30 Mon 09:19]"
 
 import sys
 import os
+from tools import save_list_into_file, group_files_by_size
 
 
 def usage():
@@ -60,59 +61,6 @@ def main():
                                    (dst_com, size, n, dst_ext))
             save_list_into_file(file_list, new_dst)
         
-
-def save_list_into_file(file_list, dst):
-    nfiles = len(file_list)
-    
-    path, tail = os.path.split(dst)
-    if path != '' and not os.access(path, os.F_OK) :
-        sys.stdout.write('Creating dir %s ...\n'  % path)
-        os.makedirs(path)
-                
-    fo = open(dst, 'w')
-    fo.write('EventCnvSvc.digiRootInputFile = {\n')
-
-    n = 0
-    for f in file_list:
-        n = n+1
-        if n<nfiles:
-            fo.write('"%s",\n' % f)
-        else:
-            fo.write('"%s"\n};\n' % f)
-
-    fo.close()
-    sys.stdout.write('Saved as: %s\n' %dst)
-
-    
-def group_files_by_size(name_list, size_max='20G'):
-    size_max = convert_size_from_str(size_max)
-    groups = []
-    group = []    
-    size_sum = 0
-
-    for name in name_list:
-        size = os.path.getsize(name)
-        if size_sum < size_max:
-            group.append(name)
-            size_sum += float(size)
-        else:
-            groups.append(group)
-            group = []
-            size_sum = 0
-            group.append(name)            
-            size_sum += float(size)
-
-        if name == name_list[-1]:
-            groups.append(group)
-
-    return groups
-
-
-def convert_size_from_str(size_str):
-    c_1GB = 1024*1024*1024
-    factor = eval(size_str.split('G')[0])
-    return factor*c_1GB
-
 
 if __name__ == '__main__':
     main()
