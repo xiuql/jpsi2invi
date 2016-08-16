@@ -10,7 +10,8 @@ ApplicationMgr.TopAlg += { "Jpsi2invi" };
 EventCnvSvc.digiRootInputFile = {
 // "/bes3fs/offline/data/664-1/psip/dst/090307/run_0008093_All_file006_SFO-1.dst",
 // "/bes3fs/offline/data/664-1/psip/dst/090307/run_0008093_All_file007_SFO-1.dst"
-"/bes3fs/offline/data/664p03/psip/09mc/dst/09psip_stream001_psip_run9025_file2.dst"
+// "/bes3fs/offline/data/664p03/psip/09mc/dst/09psip_stream001_psip_run9025_file2.dst"
+"/bes3fs/offline/data/664p03/psip/12mc/dst/12psip_stream001_psip_run26389_file1.dst" 
 };
 
 // Set output level threshold (2=DEBUG, 3=INFO, 4=WARNING, 5=ERROR, 6=FATAL )
@@ -21,8 +22,8 @@ ApplicationMgr.EvtMax = 5000;
 // ApplicationMgr.EvtMax = -1;
 
 Jpsi2invi.OutputFileName="jpsi2invi.root";
-Jpsi2invi.IsMonteCarlo="false";
-// Jpsi2invi.IsMonteCarlo="true";
+// Jpsi2invi.IsMonteCarlo="false";
+Jpsi2invi.IsMonteCarlo="true";
 
 
 				
