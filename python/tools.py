@@ -11,6 +11,7 @@ import sys
 import os
 import shutil
 import subprocess
+import ROOT 
 
 
 # ---------------------------------------------
@@ -145,6 +146,47 @@ def save_list_into_file(file_list, dst):
     fo.close()
     sys.stdout.write('Saved as: %s\n' %dst)
 
+    
+def set_root_style(stat=0, grid=0, PadTopMargin=0.08,
+                   PadLeftMargin=0.15):
+    # must be used in the beginning
+    ROOT.gROOT.SetBatch(1)
+    ROOT.gROOT.Reset()
+
+    ROOT.gStyle.SetOptTitle(0) 
+    ROOT.gStyle.SetTitleFillColor(0) 
+    ROOT.gStyle.SetTitleBorderSize(0)
+    
+    ROOT.gStyle.SetCanvasBorderMode(0)
+    ROOT.gStyle.SetCanvasColor(0)
+    ROOT.gStyle.SetCanvasDefX(0)
+    ROOT.gStyle.SetCanvasDefY(0)
+    ROOT.gStyle.SetFrameBorderMode(0)
+    ROOT.gStyle.SetFrameBorderSize(1)
+    ROOT.gStyle.SetFrameFillColor(0)
+    ROOT.gStyle.SetFrameFillStyle(0)
+    ROOT.gStyle.SetFrameLineColor(1)
+    ROOT.gStyle.SetFrameLineStyle(1)
+    ROOT.gStyle.SetFrameLineWidth(1)
+
+    ROOT.gStyle.SetPadTopMargin(PadTopMargin) 
+    ROOT.gStyle.SetPadLeftMargin(PadLeftMargin) 
+    ROOT.gStyle.SetPadRightMargin(0.05) 
+
+    ROOT.gStyle.SetLabelSize(0.02, "XYZ") 
+    ROOT.gStyle.SetTitleSize(0.02, "XYZ") 
+    ROOT.gStyle.SetTitleOffset(1.2, "Y") 
+
+    ROOT.gStyle.SetPadBorderMode(0) 
+    ROOT.gStyle.SetPadColor(0) 
+    ROOT.gStyle.SetPadTickX(1)
+    ROOT.gStyle.SetPadTickY(1)
+    ROOT.gStyle.SetPadGridX(grid)
+    ROOT.gStyle.SetPadGridY(grid)
+
+    ROOT.gStyle.SetOptStat(stat)
+    ROOT.gStyle.SetStatColor(0)
+    ROOT.gStyle.SetStatBorderSize(1)
     
 
 # ---------------------------------------------
