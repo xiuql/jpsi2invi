@@ -19,8 +19,15 @@ usage() {
     printf "\n\t%-5s  %-40s\n"  "0.1.6"    "Submit events jobs on data."
     printf "\n\t%-5s  %-40s\n"  "0.1.7"    "Check events jobs on data."
     printf "\n\t%-5s  %-40s\n"  "0.1.8"    "Merge events files." 
-    printf "\n\t%-5s  %-40s\n"  "0.1.9"    "Plot summary with data." 
-    printf "\n"
+    printf "\n\t%-5s  %-40s\n"  "0.1.9"    "Plot summary with data."
+    printf "\n\t%-5s  %-40s\n"  "0.2"      "[run on MC sample]"
+    printf "\n\t%-5s  %-40s\n"  "0.2.1"    "Run with a few samples"
+    printf "\n\t%-5s  %-40s\n"  "0.2.2"    "Split psi(2S) MC sample with each group 20G"
+    printf "\n\t%-5s  %-40s\n"  "0.2.3"    "Submit PBS jobs on psi(2S) MC sample"     
+    printf "\nAUTHOR\n"
+    printf "\n\t%-5s\n" "SHI Xin <shixin@ihep.ac.cn>"
+    printf "\nDATE\n"
+    printf "\n\t%-5s\n" "JULY 2016"     
 }
 
 
@@ -33,7 +40,6 @@ option=$1
 
 case $option in 
     0.1) echo "Running on data sample..."
-	 #qsub pbs/qsub_jpsi2invi_data.sh  
 	 ;;
 
     0.1.1) echo "Run with a few events ..."
@@ -41,7 +47,8 @@ case $option in
 	   ;;
     
     0.1.2) echo "Split data sample with each group 20G ..."
-	   ./python/get_samples.py  /bes3fs/offline/data/664p03/psip/dst $HOME/bes/jpsi2invi/v0.1/run/samples/data_664p03_psip.txt 20G 
+	   ./python/get_samples.py  /bes3fs/offline/data/664p03/psip/dst $HOME/bes/jpsi2invi/v0.1/run/samples/data_664p03_psip.txt 20G
+	   # made 633 groups 
 	   ;;
 
     0.1.3) echo "Submit PBS jobs on data..."
@@ -75,6 +82,25 @@ case $option in
     0.1.9) echo  "Plot summary with data..."
 	   ./python/plt_summary.py 
 	   ;; 
+
+
+    
+    0.2) echo "Running on MC sample..."
+	 ;;
+
+    0.2.1) echo "Run with a few events ..."
+	   boss.exe jobOptions_jpsi2invi.txt
+	   ;;
+    0.2.2) echo "Split psi(2S) MC sample with each group 20G ..."
+	   ./python/get_samples.py  /bes3fs/offline/data/664p03/psip/12mc/dst $HOME/bes/jpsi2invi/v0.1/run/samples/mc_664p03_psip_12mc.txt 20G
+	   # made 394 groups 
+	   ;;
+
+    0.2.3) echo "Submit PBS jobs on psi(2S) MC sample..."
+	   mkdir run/mc_psip12
+	   mkdir run/log/mc_psip12  
+	   qsub pbs/qsub_jpsi2invi_mc_psip12.sh  
+	   ;;
 
     
 esac
