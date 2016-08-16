@@ -1,11 +1,11 @@
-# jpsi2invi
+# J/psi to invisible decay
 
-J/psi to invisible decay
-
-## Install on lxslc5
+## Install v0.1 
 
 > mkdir -p $HOME/bes/jpsi2invi
+
 > cd $HOME/bes/jpsi2invi 
+
 > git clone https://github.com/besiii/jpsi2invi.git v0.1 
 
 ## Setup
