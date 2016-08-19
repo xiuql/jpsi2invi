@@ -24,10 +24,11 @@ usage() {
     printf "\n\t%-5s  %-40s\n"  "0.2.1"    "Run with a few samples"
     printf "\n\t%-5s  %-40s\n"  "0.2.2"    "Split psi(2S) MC sample with each group 20G"
     printf "\n\t%-5s  %-40s\n"  "0.2.3"    "Submit PBS jobs on psi(2S) MC sample"     
+    printf "\n\t%-5s  %-40s\n"  "0.2.4"    "Check PBS jobs on psi(2S) MC sample"     
     printf "\nAUTHOR\n"
     printf "\n\t%-5s\n" "SHI Xin <shixin@ihep.ac.cn>"
     printf "\nDATE\n"
-    printf "\n\t%-5s\n" "JULY 2016"     
+    printf "\n\t%-5s\n" "AUGUST 2016"     
 }
 
 
@@ -102,6 +103,9 @@ case $option in
 	   qsub pbs/qsub_jpsi2invi_mc_psip12.sh  
 	   ;;
 
+    0.2.4) echo "Check PBS jobs on psi(2S) MC sample..."
+	   ./python/chk_pbsjobs.py $HOME/bes/jpsi2invi/v0.1/run/mc_psip12  394 
+	   ;;
     
 esac
 
