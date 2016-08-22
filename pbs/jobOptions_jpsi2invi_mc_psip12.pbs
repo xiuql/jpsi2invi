@@ -1,0 +1,26 @@
+#include "$ROOTIOROOT/share/jobOptions_ReadRec.txt"
+#include "$VERTEXFITROOT/share/jobOptions_VertexDbSvc.txt"
+#include "$MAGNETICFIELDROOT/share/MagneticField.txt"
+#include "$ABSCORROOT/share/jobOptions_AbsCor.txt"
+#include "$HOME/bes/jpsi2invi/v0.1/run/samples/mc_664p03_psip_12mc_20G-$PBS_ARRAYID.txt"
+
+
+ApplicationMgr.DLLs += {"Jpsi2invi"};
+ApplicationMgr.TopAlg += { "Jpsi2invi" };
+
+// Set output level threshold (2=DEBUG, 3=INFO, 4=WARNING, 5=ERROR, 6=FATAL )
+MessageSvc.OutputLevel = 5;
+
+// Number of events to be processed (default is 10)
+// ApplicationMgr.EvtMax = 5000;
+ApplicationMgr.EvtMax = -1;
+
+Jpsi2invi.IsMonteCarlo="true";
+Jpsi2invi.OutputFileName="$HOME/bes/jpsi2invi/v0.1/run/mc_psip12/jpsi2invi_mc_psip_12mc-$PBS_ARRAYID.root";
+
+
+
+
+
+
+				
