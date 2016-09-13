@@ -1,9 +1,10 @@
 package Jpsi2invi
 
-use BesAIDA BesAIDA-*    External
 use BesPolicy BesPolicy-*
 use GaudiInterface GaudiInterface-* External
+
 use DstEvent	 DstEvent-*    Event
+use BesAIDA BesAIDA-*    External
 use EventModel   EventModel-*  Event 
 use TrigEvent TrigEvent-* Event
 
