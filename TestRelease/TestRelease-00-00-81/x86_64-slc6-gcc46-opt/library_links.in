@@ -1,0 +1,7 @@
+macro TestRelease_libraries /afs/ihep.ac.cn/bes3/offline/Boss/6.6.5/Generator/KKMC/KKMC-00-00-44-slc6tag/x86_64-slc6-gcc46-opt/libkkmc.so" "/afs/ihep.ac.cn/bes3/offline/Boss/6.6.5/Generator/Bhwide/Bhwide-00-00-11/x86_64-slc6-gcc46-opt/libbhwide.so" "/afs/ihep.ac.cn/bes3/offline/ExternalLib/SLC6/ExternalLib/gaudi/GAUDI_v23r9/GaudiSvc/x86_64-slc6-gcc46-opt/libGaudiSvc.so" "/afs/ihep.ac.cn/bes3/offline/ExternalLib/SLC6/ExternalLib/gaudi/GAUDI_v23r9/GaudiCoreSvc/x86_64-slc6-gcc46-opt/libGaudiCoreSvc.so
+macro shlibsuffix so
+macro library_install_command python" "/afs/ihep.ac.cn/bes3/offline/ExternalLib/SLC6/ExternalLib/gaudi/GAUDI_v23r9/GaudiPolicy/scripts/install.py" "-xCVS" "-x*~" "-x*.stamp" "-x*.bak" "-x.*" "-x*.pyc" "-x*.pyo" "-s" "--log=./install.x86_64-slc6-gcc46-opt.history" "
+macro symunlink /bin/rm" "-f" "
+build_strategy with_installarea
+macro CMTINSTALLAREA /afs/ihep.ac.cn/users/x/xiuql/scratchfs/bes/jpsi2invi/v0.1/InstallArea
+macro tag x86_64-slc6-gcc46-opt
